@@ -1,29 +1,57 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { supabase } from "@/lib/supabase"
-import { Producto, VentaItem } from "@/lib/types"
+import { Producto, Receta } from "@/lib/types"
+
+interface CartItem {
+  producto_id: string
+  nombre: string
+  categoria: string
+  cantidad: number
+  precio_unitario: number
+  subtotal: number
+}
 
 export default function POSPage() {
   const [productos, setProductos] = useState<Producto[]>([])
-  const [carrito, setCarrito] = useState<VentaItem[]>([])
+  const [recetas, setRecetas] = useState<Receta[]>([])
+  const [carrito, setCarrito] = useState<CartItem[]>([])
   const [metodoPago, setMetodoPago] = useState("efectivo")
+  const [cajero, setCajero] = useState("")
   const [busqueda, setBusqueda] = useState("")
   const [categoriaFiltro, setCategoriaFiltro] = useState("Todos")
   const [loading, setLoading] = useState(true)
   const [procesando, setProcesando] = useState(false)
+  const [orderId, setOrderId] = useState("")
 
-  useEffect(() => {
-    loadProductos()
+  const generateOrderId = useCallback(async () => {
+    const { data } = await supabase
+      .from("ventas")
+      .select("order_id")
+      .order("id", { ascending: false })
+      .limit(1)
+    if (data && data.length > 0) {
+      const last = String(data[0].order_id || "ORD000")
+      const num = parseInt(last.replace("ORD", "")) || 0
+      return `ORD${String(num + 1).padStart(3, "0")}`
+    }
+    return "ORD001"
   }, [])
 
-  async function loadProductos() {
-    const { data } = await supabase
-      .from("productos")
-      .select("*")
-      .eq("activo", true)
-      .order("categoria")
-    setProductos(data || [])
+  useEffect(() => {
+    loadData()
+  }, [])
+
+  async function loadData() {
+    const [prodRes, recRes] = await Promise.all([
+      supabase.from("productos").select("*").eq("activo", true).order("categoria"),
+      supabase.from("recetas").select("*"),
+    ])
+    setProductos(prodRes.data || [])
+    setRecetas(recRes.data || [])
+    const newId = await generateOrderId()
+    setOrderId(newId)
     setLoading(false)
   }
 
@@ -54,6 +82,7 @@ export default function POSPage() {
         {
           producto_id: producto.id,
           nombre: producto.nombre,
+          categoria: producto.categoria,
           cantidad: 1,
           precio_unitario: producto.precio_venta,
           subtotal: producto.precio_venta,
@@ -62,7 +91,7 @@ export default function POSPage() {
     })
   }
 
-  function cambiarCantidad(productoId: number, delta: number) {
+  function cambiarCantidad(productoId: string, delta: number) {
     setCarrito((prev) =>
       prev
         .map((item) => {
@@ -75,11 +104,11 @@ export default function POSPage() {
             subtotal: nuevaCantidad * item.precio_unitario,
           }
         })
-        .filter(Boolean) as VentaItem[]
+        .filter((item): item is CartItem => item !== null)
     )
   }
 
-  function quitarDelCarrito(productoId: number) {
+  function quitarDelCarrito(productoId: string) {
     setCarrito((prev) => prev.filter((item) => item.producto_id !== productoId))
   }
 
@@ -87,31 +116,59 @@ export default function POSPage() {
 
   async function procesarVenta() {
     if (carrito.length === 0) return
+    if (!cajero.trim()) {
+      alert("Ingresa el nombre del cajero")
+      return
+    }
     setProcesando(true)
     try {
-      const venta = {
-        items: carrito,
-        total,
+      const hoy = new Date().toISOString().split("T")[0]
+      const hora = new Date().toTimeString().split(" ")[0]
+
+      // Insert each item as a separate row in ventas
+      const ventaRows = carrito.map((item) => ({
+        order_id: orderId,
+        producto_id: item.producto_id,
+        producto: item.nombre,
+        categoria: item.categoria,
+        cantidad: item.cantidad,
+        precio_unitario: item.precio_unitario,
+        total: item.subtotal,
         metodo_pago: metodoPago,
-        fecha: new Date().toISOString().split("T")[0],
-      }
-      const { error } = await supabase.from("ventas").insert(venta)
+        cajero: cajero.trim(),
+        estado: "completada",
+        hora,
+        fecha: hoy,
+      }))
+
+      const { error } = await supabase.from("ventas").insert(ventaRows)
       if (error) throw error
 
-      // Descontar inventario
+      // Deduct inventory using recipes
       for (const item of carrito) {
-        try {
-          await supabase.rpc("descontar_inventario", {
-            p_producto_id: item.producto_id,
-            p_cantidad: item.cantidad,
-          })
-        } catch {
-          // RPC may not exist yet, that's ok
+        const recetasProducto = recetas.filter((r) => r.producto_id === item.producto_id)
+        for (const rec of recetasProducto) {
+          const cantidadDescontar = rec.cantidad * item.cantidad
+          // Get current stock
+          const { data: invData } = await supabase
+            .from("inventario")
+            .select("consumo_total")
+            .eq("ingrediente_id", rec.ingrediente_id)
+            .single()
+          if (invData) {
+            const nuevoConsumo = (Number(invData.consumo_total) || 0) + cantidadDescontar
+            await supabase
+              .from("inventario")
+              .update({ consumo_total: nuevoConsumo })
+              .eq("ingrediente_id", rec.ingrediente_id)
+          }
         }
       }
 
-      alert(`Venta registrada: $${total.toFixed(2)}`)
+      alert(`Venta ${orderId} registrada: $${total.toFixed(2)}`)
       setCarrito([])
+      const newId = await generateOrderId()
+      setOrderId(newId)
     } catch (err) {
       console.error(err)
       alert("Error al procesar la venta")
@@ -169,10 +226,23 @@ export default function POSPage() {
       <div className="w-80 bg-white rounded-lg shadow border flex flex-col">
         <div className="bg-gray-800 text-white p-3 rounded-t-lg">
           <h3 className="font-bold">Ticket de Venta</h3>
-          <p className="text-xs text-gray-400">{new Date().toLocaleDateString("es-MX")}</p>
+          <div className="flex justify-between text-xs text-gray-400">
+            <span>{orderId}</span>
+            <span>{new Date().toLocaleDateString("es-MX")}</span>
+          </div>
         </div>
 
-        <div className="flex-1 overflow-auto p-3 space-y-2">
+        <div className="p-3">
+          <input
+            type="text"
+            placeholder="Nombre del cajero..."
+            value={cajero}
+            onChange={(e) => setCajero(e.target.value)}
+            className="w-full border rounded px-3 py-2 text-sm mb-2"
+          />
+        </div>
+
+        <div className="flex-1 overflow-auto px-3 space-y-2">
           {carrito.length === 0 ? (
             <p className="text-gray-400 text-center py-8 text-sm">
               Selecciona productos para vender
@@ -194,7 +264,7 @@ export default function POSPage() {
                     onClick={() => cambiarCantidad(item.producto_id, -1)}
                     className="w-6 h-6 bg-gray-200 rounded text-sm font-bold hover:bg-gray-300"
                   >
-                    −
+                    -
                   </button>
                   <span className="w-6 text-center text-sm font-semibold">
                     {item.cantidad}
@@ -213,7 +283,7 @@ export default function POSPage() {
                   onClick={() => quitarDelCarrito(item.producto_id)}
                   className="text-red-400 hover:text-red-600 text-xs"
                 >
-                  ✕
+                  X
                 </button>
               </div>
             ))
@@ -233,7 +303,7 @@ export default function POSPage() {
           >
             <option value="efectivo">Efectivo</option>
             <option value="tarjeta">Tarjeta</option>
-            <option value="transferencia">Transferencia</option>
+            <option value="qr">QR / Transferencia</option>
           </select>
 
           <button

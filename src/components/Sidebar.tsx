@@ -7,10 +7,16 @@ const menuItems = [
   { href: "/", label: "Dashboard", icon: "📊" },
   { href: "/pos", label: "Punto de Venta", icon: "🍔" },
   { href: "/productos", label: "Productos", icon: "📦" },
+  { href: "/ventas", label: "Ventas", icon: "💰" },
   { href: "/inventario", label: "Inventario", icon: "📋" },
   { href: "/compras", label: "Compras", icon: "🛒" },
-  { href: "/ventas", label: "Ventas", icon: "💰" },
   { href: "/recetas", label: "Recetas/Costos", icon: "📝" },
+  { href: "/gastos", label: "Gastos", icon: "💸" },
+  { href: "/reportes", label: "Reportes", icon: "📈" },
+  { href: "/caja", label: "Caja Diaria", icon: "🏦" },
+  { href: "/margenes", label: "Margenes", icon: "📐" },
+  { href: "/estado-resultados", label: "Est. Resultados", icon: "🧾" },
+  { href: "/horas-pico", label: "Horas Pico", icon: "🕐" },
   { href: "/merma", label: "Merma", icon: "⚠️" },
 ]
 
@@ -23,7 +29,7 @@ export default function Sidebar() {
         <h1 className="text-xl font-bold text-[var(--primary)]">🍔 Contry Burger</h1>
         <p className="text-xs text-gray-400 mt-1">Sistema POS / ERP</p>
       </div>
-      <nav className="flex-1 py-2">
+      <nav className="flex-1 py-2 overflow-auto">
         {menuItems.map((item) => {
           const isActive = pathname === item.href
           return (
@@ -43,7 +49,7 @@ export default function Sidebar() {
         })}
       </nav>
       <div className="p-4 border-t border-gray-700 text-xs text-gray-500">
-        v1.0 — Contry Burger
+        v2.0 — Contry Burger
       </div>
     </aside>
   )

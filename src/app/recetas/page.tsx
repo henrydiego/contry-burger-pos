@@ -3,28 +3,31 @@
 import { useEffect, useState } from "react"
 import { supabase } from "@/lib/supabase"
 import ExcelTable from "@/components/ExcelTable"
+import { Producto, Inventario } from "@/lib/types"
 
 interface RecetaRow {
-  id: number
-  producto_id: number
-  ingrediente: string
+  id: string
+  producto_id: string
+  ingrediente_id: string
+  producto_nombre: string
+  ingrediente_nombre: string
   cantidad: number
   unidad: string
-  costo: number
-  producto_nombre: string
+  costo_ingrediente: number
+  costo_linea: number
 }
 
 export default function RecetasPage() {
   const [recetas, setRecetas] = useState<RecetaRow[]>([])
+  const [productos, setProductos] = useState<Producto[]>([])
+  const [ingredientes, setIngredientes] = useState<Inventario[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
-  const [productos, setProductos] = useState<{ id: number; nombre: string; precio_venta: number }[]>([])
   const [form, setForm] = useState({
     producto_id: "",
-    ingrediente: "",
+    ingrediente_id: "",
     cantidad: "",
     unidad: "kg",
-    costo: "",
   })
 
   useEffect(() => {
@@ -32,35 +35,58 @@ export default function RecetasPage() {
   }, [])
 
   async function loadData() {
-    const [recRes, prodRes] = await Promise.all([
-      supabase.from("recetas").select("*, producto:productos(nombre, precio_venta)"),
-      supabase.from("productos").select("id, nombre, precio_venta").eq("activo", true),
+    const [recRes, prodRes, ingRes] = await Promise.all([
+      supabase.from("recetas").select("*"),
+      supabase.from("productos").select("*").eq("activo", true),
+      supabase.from("inventario").select("*"),
     ])
 
-    const rows = (recRes.data || []).map((r) => ({
-      ...r,
-      producto_nombre: (r.producto as { nombre?: string })?.nombre || "—",
-    }))
+    const rawRecetas = recRes.data || []
+    const prods = prodRes.data || []
+    const ings = ingRes.data || []
+
+    setProductos(prods)
+    setIngredientes(ings)
+
+    const rows: RecetaRow[] = rawRecetas.map((r) => {
+      const ing = ings.find((i: Inventario) => i.ingrediente_id === r.ingrediente_id)
+      const costoPromedio = Number(ing?.costo_promedio) || 0
+      const cantidad = Number(r.cantidad) || 0
+      return {
+        id: r.id,
+        producto_id: r.producto_id,
+        ingrediente_id: r.ingrediente_id,
+        producto_nombre: r.producto_nombre || "",
+        ingrediente_nombre: r.ingrediente_nombre || "",
+        cantidad,
+        unidad: r.unidad,
+        costo_ingrediente: costoPromedio,
+        costo_linea: Number((costoPromedio * cantidad).toFixed(2)),
+      }
+    })
 
     setRecetas(rows)
-    setProductos(prodRes.data || [])
     setLoading(false)
   }
 
   async function guardarReceta() {
+    const prod = productos.find((p) => p.id === form.producto_id)
+    const ing = ingredientes.find((i) => i.ingrediente_id === form.ingrediente_id)
+
     const { error } = await supabase.from("recetas").insert({
-      producto_id: parseInt(form.producto_id),
-      ingrediente: form.ingrediente,
-      cantidad: parseFloat(form.cantidad),
+      producto_id: form.producto_id,
+      ingrediente_id: form.ingrediente_id,
+      producto_nombre: prod?.nombre || "",
+      ingrediente_nombre: ing?.nombre || "",
+      cantidad: parseFloat(form.cantidad) || 0,
       unidad: form.unidad,
-      costo: parseFloat(form.costo),
     })
     if (error) {
       alert("Error: " + error.message)
       return
     }
     setShowForm(false)
-    setForm({ producto_id: "", ingrediente: "", cantidad: "", unidad: "kg", costo: "" })
+    setForm({ producto_id: "", ingrediente_id: "", cantidad: "", unidad: "kg" })
     loadData()
   }
 
@@ -74,7 +100,7 @@ export default function RecetasPage() {
   async function editarCelda(rowIdx: number, key: string, value: string) {
     const receta = recetas[rowIdx]
     const updateData: Record<string, unknown> = {}
-    if (key === "cantidad" || key === "costo") {
+    if (key === "cantidad") {
       updateData[key] = parseFloat(value) || 0
     } else {
       updateData[key] = value
@@ -83,30 +109,31 @@ export default function RecetasPage() {
     loadData()
   }
 
-  // Costeo por producto
-  const costeoMap: Record<number, { nombre: string; costoTotal: number; precioVenta: number }> = {}
+  // Costeo summary per product
+  const costeoMap: Record<string, { producto: string; costoReceta: number; precioVenta: number }> = {}
   recetas.forEach((r) => {
     if (!costeoMap[r.producto_id]) {
       const prod = productos.find((p) => p.id === r.producto_id)
       costeoMap[r.producto_id] = {
-        nombre: r.producto_nombre,
-        costoTotal: 0,
+        producto: r.producto_nombre,
+        costoReceta: 0,
         precioVenta: prod?.precio_venta || 0,
       }
     }
-    costeoMap[r.producto_id].costoTotal += r.costo
+    costeoMap[r.producto_id].costoReceta += r.costo_linea
   })
 
-  const costeoRows = Object.entries(costeoMap).map(([id, data]) => ({
-    producto_id: id,
-    producto: data.nombre,
-    costo_receta: data.costoTotal.toFixed(2),
-    precio_venta: data.precioVenta.toFixed(2),
-    ganancia: (data.precioVenta - data.costoTotal).toFixed(2),
-    margen: data.precioVenta > 0
-      ? (((data.precioVenta - data.costoTotal) / data.precioVenta) * 100).toFixed(1) + "%"
-      : "N/A",
-  }))
+  const costeoRows = Object.entries(costeoMap).map(([, data]) => {
+    const ganancia = data.precioVenta - data.costoReceta
+    const margen = data.precioVenta > 0 ? (ganancia / data.precioVenta) * 100 : 0
+    return {
+      producto: data.producto,
+      costo_receta: data.costoReceta.toFixed(2),
+      precio_venta: data.precioVenta.toFixed(2),
+      ganancia: ganancia.toFixed(2),
+      margen: margen.toFixed(1) + "%",
+    }
+  })
 
   if (loading) return <div className="text-gray-400 text-center py-8">Cargando...</div>
 
@@ -118,12 +145,12 @@ export default function RecetasPage() {
           onClick={() => setShowForm(!showForm)}
           className="bg-[var(--primary)] text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-[var(--primary-dark)]"
         >
-          + Agregar Ingrediente
+          + Agregar Ingrediente a Receta
         </button>
       </div>
 
       {showForm && (
-        <div className="bg-white p-4 rounded-lg shadow border grid grid-cols-2 md:grid-cols-6 gap-3">
+        <div className="bg-white p-4 rounded-lg shadow border grid grid-cols-2 md:grid-cols-5 gap-3">
           <select
             value={form.producto_id}
             onChange={(e) => setForm({ ...form, producto_id: e.target.value })}
@@ -134,16 +161,25 @@ export default function RecetasPage() {
               <option key={p.id} value={p.id}>{p.nombre}</option>
             ))}
           </select>
-          <input
-            placeholder="Ingrediente"
-            value={form.ingrediente}
-            onChange={(e) => setForm({ ...form, ingrediente: e.target.value })}
+          <select
+            value={form.ingrediente_id}
+            onChange={(e) => {
+              const ing = ingredientes.find((i) => i.ingrediente_id === e.target.value)
+              setForm({ ...form, ingrediente_id: e.target.value, unidad: ing?.unidad || "kg" })
+            }}
             className="border rounded px-3 py-2 text-sm"
-          />
+          >
+            <option value="">Ingrediente</option>
+            {ingredientes.map((i) => (
+              <option key={i.ingrediente_id} value={i.ingrediente_id}>
+                {i.nombre} ({i.unidad})
+              </option>
+            ))}
+          </select>
           <input
             placeholder="Cantidad"
             type="number"
-            step="0.01"
+            step="0.001"
             value={form.cantidad}
             onChange={(e) => setForm({ ...form, cantidad: e.target.value })}
             className="border rounded px-3 py-2 text-sm"
@@ -159,14 +195,6 @@ export default function RecetasPage() {
             <option value="ml">ml</option>
             <option value="pz">pz</option>
           </select>
-          <input
-            placeholder="Costo $"
-            type="number"
-            step="0.01"
-            value={form.costo}
-            onChange={(e) => setForm({ ...form, costo: e.target.value })}
-            className="border rounded px-3 py-2 text-sm"
-          />
           <button
             onClick={guardarReceta}
             className="bg-green-600 text-white rounded px-4 py-2 text-sm font-semibold hover:bg-green-700"
@@ -176,7 +204,6 @@ export default function RecetasPage() {
         </div>
       )}
 
-      {/* Costeo Summary */}
       {costeoRows.length > 0 && (
         <ExcelTable
           title="Resumen de Costeo por Producto"
@@ -192,21 +219,26 @@ export default function RecetasPage() {
         />
       )}
 
-      {/* Detail */}
       <ExcelTable
-        title="Detalle de Recetas (doble clic para editar)"
+        title="Detalle de Recetas (doble clic para editar cantidad)"
         columns={[
-          { key: "id", label: "ID", width: "60px" },
           { key: "producto_nombre", label: "Producto" },
-          { key: "ingrediente", label: "Ingrediente", editable: true },
+          { key: "ingrediente_nombre", label: "Ingrediente" },
           { key: "cantidad", label: "Cantidad", type: "number", editable: true },
-          { key: "unidad", label: "Unidad", editable: true },
-          { key: "costo", label: "Costo $", type: "currency", editable: true },
+          { key: "unidad", label: "Unidad" },
+          { key: "costo_ingrediente", label: "Costo/Unid", type: "currency" },
+          { key: "costo_linea", label: "Costo Linea", type: "currency" },
         ]}
         data={recetas as unknown as Record<string, unknown>[]}
         onEdit={editarCelda}
         onDelete={eliminarReceta}
       />
+
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-800">
+        <p className="font-semibold mb-1">Calculo de Costeo:</p>
+        <p>Costo Linea = Costo Promedio del Ingrediente (inventario) x Cantidad en Receta</p>
+        <p>Costo Receta = Suma de todos los Costos Linea del producto</p>
+      </div>
     </div>
   )
 }

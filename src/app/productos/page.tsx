@@ -10,10 +10,11 @@ export default function ProductosPage() {
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState({
+    id: "",
     nombre: "",
     categoria: "",
+    costo: "",
     precio_venta: "",
-    costo_unitario: "",
     activo: true,
   })
 
@@ -32,10 +33,11 @@ export default function ProductosPage() {
 
   async function guardarProducto() {
     const payload = {
+      id: form.id,
       nombre: form.nombre,
       categoria: form.categoria,
-      precio_venta: parseFloat(form.precio_venta),
-      costo_unitario: parseFloat(form.costo_unitario),
+      costo: parseFloat(form.costo) || 0,
+      precio_venta: parseFloat(form.precio_venta) || 0,
       activo: form.activo,
     }
     const { error } = await supabase.from("productos").insert(payload)
@@ -44,7 +46,7 @@ export default function ProductosPage() {
       return
     }
     setShowForm(false)
-    setForm({ nombre: "", categoria: "", precio_venta: "", costo_unitario: "", activo: true })
+    setForm({ id: "", nombre: "", categoria: "", costo: "", precio_venta: "", activo: true })
     loadProductos()
   }
 
@@ -58,8 +60,10 @@ export default function ProductosPage() {
   async function editarCelda(rowIdx: number, key: string, value: string) {
     const prod = productos[rowIdx]
     const updateData: Record<string, unknown> = {}
-    if (key === "precio_venta" || key === "costo_unitario") {
+    if (key === "precio_venta" || key === "costo") {
       updateData[key] = parseFloat(value) || 0
+    } else if (key === "activo") {
+      updateData[key] = value === "true" || value === "1"
     } else {
       updateData[key] = value
     }
@@ -67,14 +71,18 @@ export default function ProductosPage() {
     loadProductos()
   }
 
-  // Margin calculation
-  const productosConMargen = productos.map((p) => ({
-    ...p,
-    margen: p.precio_venta > 0
-      ? (((p.precio_venta - p.costo_unitario) / p.precio_venta) * 100).toFixed(1) + "%"
-      : "N/A",
-    ganancia: (p.precio_venta - p.costo_unitario).toFixed(2),
-  }))
+  const productosConMargen = productos.map((p) => {
+    const margenPeso = p.precio_venta - p.costo
+    const margenPct = p.precio_venta > 0
+      ? ((margenPeso / p.precio_venta) * 100)
+      : 0
+    return {
+      ...p,
+      margen_peso: margenPeso.toFixed(2),
+      margen_pct: margenPct.toFixed(1) + "%",
+      estado_margen: margenPct > 30 ? "Bueno" : "Revisar",
+    }
+  })
 
   if (loading) return <div className="text-gray-400 text-center py-8">Cargando...</div>
 
@@ -91,7 +99,13 @@ export default function ProductosPage() {
       </div>
 
       {showForm && (
-        <div className="bg-white p-4 rounded-lg shadow border grid grid-cols-2 md:grid-cols-5 gap-3">
+        <div className="bg-white p-4 rounded-lg shadow border grid grid-cols-2 md:grid-cols-6 gap-3">
+          <input
+            placeholder="ID (ej: PROD001)"
+            value={form.id}
+            onChange={(e) => setForm({ ...form, id: e.target.value })}
+            className="border rounded px-3 py-2 text-sm"
+          />
           <input
             placeholder="Nombre"
             value={form.nombre}
@@ -105,19 +119,19 @@ export default function ProductosPage() {
             className="border rounded px-3 py-2 text-sm"
           />
           <input
+            placeholder="Costo"
+            type="number"
+            step="0.01"
+            value={form.costo}
+            onChange={(e) => setForm({ ...form, costo: e.target.value })}
+            className="border rounded px-3 py-2 text-sm"
+          />
+          <input
             placeholder="Precio Venta"
             type="number"
             step="0.01"
             value={form.precio_venta}
             onChange={(e) => setForm({ ...form, precio_venta: e.target.value })}
-            className="border rounded px-3 py-2 text-sm"
-          />
-          <input
-            placeholder="Costo Unitario"
-            type="number"
-            step="0.01"
-            value={form.costo_unitario}
-            onChange={(e) => setForm({ ...form, costo_unitario: e.target.value })}
             className="border rounded px-3 py-2 text-sm"
           />
           <button
@@ -132,14 +146,14 @@ export default function ProductosPage() {
       <ExcelTable
         title="Catalogo de Productos (doble clic para editar)"
         columns={[
-          { key: "id", label: "ID", width: "60px" },
+          { key: "id", label: "ID", width: "80px" },
           { key: "nombre", label: "Nombre", editable: true },
           { key: "categoria", label: "Categoria", editable: true },
+          { key: "costo", label: "Costo", type: "currency", editable: true },
           { key: "precio_venta", label: "Precio Venta", type: "currency", editable: true },
-          { key: "costo_unitario", label: "Costo", type: "currency", editable: true },
-          { key: "ganancia", label: "Ganancia", type: "currency" },
-          { key: "margen", label: "Margen %" },
-          { key: "activo", label: "Activo" },
+          { key: "margen_peso", label: "Margen $", type: "currency" },
+          { key: "margen_pct", label: "Margen %" },
+          { key: "estado_margen", label: "Estado" },
         ]}
         data={productosConMargen as unknown as Record<string, unknown>[]}
         onEdit={editarCelda}

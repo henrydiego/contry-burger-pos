@@ -1,82 +1,139 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { supabase } from "@/lib/supabase"
 import ExcelTable from "@/components/ExcelTable"
-
-interface CompraRow {
-  id: number
-  proveedor: string
-  producto: string
-  cantidad: number
-  unidad: string
-  precio_unitario: number
-  total: number
-  fecha: string
-}
+import StatCard from "@/components/StatCard"
+import { Inventario } from "@/lib/types"
 
 export default function ComprasPage() {
-  const [compras, setCompras] = useState<CompraRow[]>([])
+  const [compras, setCompras] = useState<Record<string, unknown>[]>([])
+  const [ingredientes, setIngredientes] = useState<Inventario[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
+  const [compraId, setCompraId] = useState("")
   const [form, setForm] = useState({
+    ingrediente_id: "",
     proveedor: "",
-    producto: "",
     cantidad: "",
     unidad: "kg",
-    precio_unitario: "",
+    costo_unitario: "",
+    notas: "",
     fecha: new Date().toISOString().split("T")[0],
   })
 
-  useEffect(() => {
-    loadCompras()
-  }, [])
-
-  async function loadCompras() {
+  const generateCompraId = useCallback(async () => {
     const { data } = await supabase
       .from("compras")
-      .select("*")
-      .order("fecha", { ascending: false })
-    setCompras(data || [])
+      .select("compra_id")
+      .order("id", { ascending: false })
+      .limit(1)
+    if (data && data.length > 0) {
+      const last = String(data[0].compra_id || "COMP000")
+      const num = parseInt(last.replace("COMP", "")) || 0
+      return `COMP${String(num + 1).padStart(3, "0")}`
+    }
+    return "COMP001"
+  }, [])
+
+  useEffect(() => {
+    loadData()
+  }, [])
+
+  async function loadData() {
+    const [comprasRes, ingRes] = await Promise.all([
+      supabase.from("compras").select("*").order("fecha", { ascending: false }),
+      supabase.from("inventario").select("*"),
+    ])
+    setCompras(comprasRes.data || [])
+    setIngredientes(ingRes.data || [])
+    const newId = await generateCompraId()
+    setCompraId(newId)
     setLoading(false)
   }
 
   async function guardarCompra() {
-    const cantidad = parseFloat(form.cantidad)
-    const precioUnitario = parseFloat(form.precio_unitario)
+    const cantidad = parseFloat(form.cantidad) || 0
+    const costoUnitario = parseFloat(form.costo_unitario) || 0
+    const costoTotal = cantidad * costoUnitario
+    const ing = ingredientes.find((i) => i.ingrediente_id === form.ingrediente_id)
+
     const { error } = await supabase.from("compras").insert({
+      compra_id: compraId,
+      ingrediente_id: form.ingrediente_id,
+      ingrediente: ing?.nombre || "",
       proveedor: form.proveedor,
-      producto: form.producto,
       cantidad,
       unidad: form.unidad,
-      precio_unitario: precioUnitario,
-      total: cantidad * precioUnitario,
+      costo_unitario: costoUnitario,
+      costo_total: costoTotal,
+      notas: form.notas,
       fecha: form.fecha,
     })
     if (error) {
       alert("Error: " + error.message)
       return
     }
+
+    // Update inventario: total_comprado and costo_promedio
+    if (ing) {
+      const nuevoTotalComprado = (Number(ing.total_comprado) || 0) + cantidad
+      const costoActual = Number(ing.costo_promedio) || 0
+      const totalAnterior = (Number(ing.total_comprado) || 0) * costoActual
+      const nuevoCostoPromedio = nuevoTotalComprado > 0
+        ? (totalAnterior + costoTotal) / nuevoTotalComprado
+        : costoUnitario
+
+      await supabase
+        .from("inventario")
+        .update({
+          total_comprado: nuevoTotalComprado,
+          costo_promedio: Number(nuevoCostoPromedio.toFixed(2)),
+        })
+        .eq("ingrediente_id", form.ingrediente_id)
+    }
+
     setShowForm(false)
     setForm({
+      ingrediente_id: "",
       proveedor: "",
-      producto: "",
       cantidad: "",
       unidad: "kg",
-      precio_unitario: "",
+      costo_unitario: "",
+      notas: "",
       fecha: new Date().toISOString().split("T")[0],
     })
-    loadCompras()
+    loadData()
   }
 
   async function eliminarCompra(idx: number) {
     const compra = compras[idx]
     if (!confirm("Eliminar esta compra?")) return
     await supabase.from("compras").delete().eq("id", compra.id)
-    loadCompras()
+    loadData()
   }
 
-  const totalCompras = compras.reduce((s, c) => s + (c.total || 0), 0)
+  const totalCompras = compras.reduce((s, c) => s + (Number(c.costo_total) || 0), 0)
+
+  // Monthly summary
+  const mesActual = new Date().toISOString().slice(0, 7)
+  const comprasMes = compras.filter((c) => String(c.fecha).startsWith(mesActual))
+  const totalMes = comprasMes.reduce((s, c) => s + (Number(c.costo_total) || 0), 0)
+
+  // Monthly summary by ingredient
+  const resumenMes: Record<string, { ingrediente: string; cantidad: number; total: number }> = {}
+  comprasMes.forEach((c) => {
+    const key = String(c.ingrediente_id)
+    if (!resumenMes[key]) {
+      resumenMes[key] = { ingrediente: String(c.ingrediente), cantidad: 0, total: 0 }
+    }
+    resumenMes[key].cantidad += Number(c.cantidad) || 0
+    resumenMes[key].total += Number(c.costo_total) || 0
+  })
+  const resumenRows = Object.values(resumenMes).map((r) => ({
+    ...r,
+    total: Number(r.total.toFixed(2)),
+  }))
 
   if (loading) return <div className="text-gray-400 text-center py-8">Cargando...</div>
 
@@ -86,7 +143,7 @@ export default function ComprasPage() {
         <div>
           <h2 className="text-2xl font-bold">Registro de Compras</h2>
           <p className="text-sm text-gray-500">
-            Total acumulado: <span className="font-bold text-[var(--primary)]">${totalCompras.toFixed(2)}</span>
+            Proxima compra: <span className="font-bold">{compraId}</span>
           </p>
         </div>
         <button
@@ -97,8 +154,29 @@ export default function ComprasPage() {
         </button>
       </div>
 
+      <div className="grid grid-cols-3 gap-4">
+        <StatCard title="Total Compras" value={`$${totalCompras.toFixed(2)}`} color="purple" icon="🛒" />
+        <StatCard title="Compras Este Mes" value={`$${totalMes.toFixed(2)}`} color="blue" icon="📅" />
+        <StatCard title="N Compras Mes" value={String(comprasMes.length)} color="green" icon="📦" />
+      </div>
+
       {showForm && (
         <div className="bg-white p-4 rounded-lg shadow border grid grid-cols-2 md:grid-cols-4 gap-3">
+          <select
+            value={form.ingrediente_id}
+            onChange={(e) => {
+              const ing = ingredientes.find((i) => i.ingrediente_id === e.target.value)
+              setForm({ ...form, ingrediente_id: e.target.value, unidad: ing?.unidad || "kg" })
+            }}
+            className="border rounded px-3 py-2 text-sm"
+          >
+            <option value="">Seleccionar ingrediente</option>
+            {ingredientes.map((i) => (
+              <option key={i.ingrediente_id} value={i.ingrediente_id}>
+                {i.nombre} ({i.unidad})
+              </option>
+            ))}
+          </select>
           <input
             placeholder="Proveedor"
             value={form.proveedor}
@@ -106,35 +184,19 @@ export default function ComprasPage() {
             className="border rounded px-3 py-2 text-sm"
           />
           <input
-            placeholder="Producto / Insumo"
-            value={form.producto}
-            onChange={(e) => setForm({ ...form, producto: e.target.value })}
-            className="border rounded px-3 py-2 text-sm"
-          />
-          <input
             placeholder="Cantidad"
             type="number"
+            step="0.01"
             value={form.cantidad}
             onChange={(e) => setForm({ ...form, cantidad: e.target.value })}
             className="border rounded px-3 py-2 text-sm"
           />
-          <select
-            value={form.unidad}
-            onChange={(e) => setForm({ ...form, unidad: e.target.value })}
-            className="border rounded px-3 py-2 text-sm"
-          >
-            <option value="kg">Kilogramos</option>
-            <option value="lt">Litros</option>
-            <option value="pz">Piezas</option>
-            <option value="paq">Paquetes</option>
-            <option value="caja">Cajas</option>
-          </select>
           <input
-            placeholder="Precio Unitario"
+            placeholder="Costo Unitario"
             type="number"
             step="0.01"
-            value={form.precio_unitario}
-            onChange={(e) => setForm({ ...form, precio_unitario: e.target.value })}
+            value={form.costo_unitario}
+            onChange={(e) => setForm({ ...form, costo_unitario: e.target.value })}
             className="border rounded px-3 py-2 text-sm"
           />
           <input
@@ -143,9 +205,15 @@ export default function ComprasPage() {
             onChange={(e) => setForm({ ...form, fecha: e.target.value })}
             className="border rounded px-3 py-2 text-sm"
           />
+          <input
+            placeholder="Notas"
+            value={form.notas}
+            onChange={(e) => setForm({ ...form, notas: e.target.value })}
+            className="border rounded px-3 py-2 text-sm"
+          />
           <div className="flex items-center text-sm text-gray-600">
             Total: <span className="font-bold ml-1">
-              ${((parseFloat(form.cantidad) || 0) * (parseFloat(form.precio_unitario) || 0)).toFixed(2)}
+              ${((parseFloat(form.cantidad) || 0) * (parseFloat(form.costo_unitario) || 0)).toFixed(2)}
             </span>
           </div>
           <button
@@ -157,21 +225,37 @@ export default function ComprasPage() {
         </div>
       )}
 
-      <ExcelTable
-        title="Historial de Compras"
-        columns={[
-          { key: "id", label: "ID", width: "60px" },
-          { key: "fecha", label: "Fecha", type: "date" },
-          { key: "proveedor", label: "Proveedor" },
-          { key: "producto", label: "Producto" },
-          { key: "cantidad", label: "Cant.", type: "number" },
-          { key: "unidad", label: "Unidad" },
-          { key: "precio_unitario", label: "P. Unit.", type: "currency" },
-          { key: "total", label: "Total", type: "currency" },
-        ]}
-        data={compras as unknown as Record<string, unknown>[]}
-        onDelete={eliminarCompra}
-      />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          <ExcelTable
+            title="Historial de Compras"
+            columns={[
+              { key: "compra_id", label: "Compra ID", width: "90px" },
+              { key: "fecha", label: "Fecha", type: "date" },
+              { key: "ingrediente", label: "Ingrediente" },
+              { key: "proveedor", label: "Proveedor" },
+              { key: "cantidad", label: "Cant.", type: "number" },
+              { key: "unidad", label: "Unidad" },
+              { key: "costo_unitario", label: "C. Unit.", type: "currency" },
+              { key: "costo_total", label: "Total", type: "currency" },
+            ]}
+            data={compras}
+            onDelete={eliminarCompra}
+          />
+        </div>
+        <div>
+          <ExcelTable
+            title="Resumen Mensual"
+            columns={[
+              { key: "ingrediente", label: "Ingrediente" },
+              { key: "cantidad", label: "Cant.", type: "number" },
+              { key: "total", label: "Total", type: "currency" },
+            ]}
+            data={resumenRows as Record<string, unknown>[]}
+            showRowNumbers={false}
+          />
+        </div>
+      </div>
     </div>
   )
 }
