@@ -1,0 +1,63 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #f8f9fa;
+  --foreground: #1a1a2e;
+  --primary: #e63946;
+  --primary-dark: #c1121f;
+  --accent: #f4a261;
+  --success: #2a9d8f;
+  --warning: #e9c46a;
+  --danger: #e76f51;
+}
+
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  color: var(--foreground);
+  background: var(--background);
+}
+
+/* Excel-like table styles */
+.excel-table {
+  @apply w-full border-collapse text-sm;
+}
+
+.excel-table thead th {
+  @apply bg-gray-700 text-white px-3 py-2 text-left font-semibold border border-gray-600 sticky top-0 z-10;
+}
+
+.excel-table tbody td {
+  @apply px-3 py-2 border border-gray-200 bg-white;
+}
+
+.excel-table tbody tr:hover td {
+  @apply bg-blue-50;
+}
+
+.excel-table tbody tr:nth-child(even) td {
+  @apply bg-gray-50;
+}
+
+.excel-table tbody tr:nth-child(even):hover td {
+  @apply bg-blue-50;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-gray-100;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-400 rounded;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-500;
+}
