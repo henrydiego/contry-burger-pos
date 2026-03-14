@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useState } from "react"
 import { supabase } from "@/lib/supabase"
 import ExcelTable from "@/components/ExcelTable"
 import StatCard from "@/components/StatCard"
@@ -11,7 +11,6 @@ export default function ComprasPage() {
   const [ingredientes, setIngredientes] = useState<Inventario[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
-  const [compraId, setCompraId] = useState("")
   const [form, setForm] = useState({
     ingrediente_id: "",
     proveedor: "",
@@ -21,20 +20,6 @@ export default function ComprasPage() {
     notas: "",
     fecha: new Date().toISOString().split("T")[0],
   })
-
-  const generateCompraId = useCallback(async () => {
-    const { data } = await supabase
-      .from("compras")
-      .select("compra_id")
-      .order("id", { ascending: false })
-      .limit(1)
-    if (data && data.length > 0) {
-      const last = String(data[0].compra_id || "COMP000")
-      const num = parseInt(last.replace("COMP", "")) || 0
-      return `COMP${String(num + 1).padStart(3, "0")}`
-    }
-    return "COMP001"
-  }, [])
 
   useEffect(() => {
     loadData()
@@ -47,8 +32,6 @@ export default function ComprasPage() {
     ])
     setCompras(comprasRes.data || [])
     setIngredientes(ingRes.data || [])
-    const newId = await generateCompraId()
-    setCompraId(newId)
     setLoading(false)
   }
 
@@ -59,7 +42,6 @@ export default function ComprasPage() {
     const ing = ingredientes.find((i) => i.ingrediente_id === form.ingrediente_id)
 
     const { error } = await supabase.from("compras").insert({
-      compra_id: compraId,
       ingrediente_id: form.ingrediente_id,
       ingrediente: ing?.nombre || "",
       proveedor: form.proveedor,
@@ -142,9 +124,6 @@ export default function ComprasPage() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold">Registro de Compras</h2>
-          <p className="text-sm text-gray-500">
-            Proxima compra: <span className="font-bold">{compraId}</span>
-          </p>
         </div>
         <button
           onClick={() => setShowForm(!showForm)}
@@ -230,7 +209,7 @@ export default function ComprasPage() {
           <ExcelTable
             title="Historial de Compras"
             columns={[
-              { key: "compra_id", label: "Compra ID", width: "90px" },
+              { key: "id", label: "# Compra", width: "90px" },
               { key: "fecha", label: "Fecha", type: "date" },
               { key: "ingrediente", label: "Ingrediente" },
               { key: "proveedor", label: "Proveedor" },
