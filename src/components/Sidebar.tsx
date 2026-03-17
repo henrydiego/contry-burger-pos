@@ -1,11 +1,13 @@
 "use client"
 
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
+import { supabase } from "@/lib/supabase"
 
 const menuItems = [
   { href: "/", label: "Dashboard", icon: "📊" },
   { href: "/pos", label: "Punto de Venta", icon: "🍔" },
+  { href: "/pedidos", label: "Pedidos Online", icon: "📱" },
   { href: "/productos", label: "Productos", icon: "📦" },
   { href: "/ventas", label: "Ventas", icon: "💰" },
   { href: "/inventario", label: "Inventario", icon: "📋" },
@@ -18,18 +20,45 @@ const menuItems = [
   { href: "/estado-resultados", label: "Est. Resultados", icon: "🧾" },
   { href: "/horas-pico", label: "Horas Pico", icon: "🕐" },
   { href: "/merma", label: "Merma", icon: "⚠️" },
+  { href: "/config", label: "Configuración", icon: "⚙️" },
 ]
 
-export default function Sidebar() {
+interface SidebarProps {
+  onClose?: () => void
+}
+
+export default function Sidebar({ onClose }: SidebarProps) {
   const pathname = usePathname()
+  const router = useRouter()
+
+  async function handleLogout() {
+    await supabase.auth.signOut()
+    router.push("/login")
+    router.refresh()
+  }
 
   return (
-    <aside className="w-56 bg-gray-900 text-white flex flex-col shrink-0">
-      <div className="p-4 border-b border-gray-700">
-        <h1 className="text-xl font-bold text-[var(--primary)]">🍔 Contry Burger</h1>
-        <p className="text-xs text-gray-400 mt-1">Sistema POS / ERP</p>
+    <aside className="w-56 bg-gray-900 text-white flex flex-col h-full">
+      <div className="p-4 border-b border-gray-700 flex items-center justify-between shrink-0">
+        <div>
+          <h1 className="text-lg font-bold text-red-500">🍔 Contry Burger</h1>
+          <p className="text-xs text-gray-400 mt-0.5">Sistema POS / ERP</p>
+        </div>
+        {/* Cerrar en mobile */}
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="md:hidden text-gray-400 hover:text-white p-1"
+            aria-label="Cerrar menú"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        )}
       </div>
-      <nav className="flex-1 py-2 overflow-auto">
+
+      <nav className="flex-1 py-2 overflow-y-auto">
         {menuItems.map((item) => {
           const isActive = pathname === item.href
           return (
@@ -38,18 +67,25 @@ export default function Sidebar() {
               href={item.href}
               className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
                 isActive
-                  ? "bg-[var(--primary)] text-white font-semibold"
+                  ? "bg-red-600 text-white font-semibold"
                   : "text-gray-300 hover:bg-gray-800 hover:text-white"
               }`}
             >
-              <span>{item.icon}</span>
-              {item.label}
+              <span className="text-base">{item.icon}</span>
+              <span className="truncate">{item.label}</span>
             </Link>
           )
         })}
       </nav>
-      <div className="p-4 border-t border-gray-700 text-xs text-gray-500">
-        v2.0 — Contry Burger
+
+      <div className="p-4 border-t border-gray-700 space-y-2 shrink-0">
+        <p className="text-xs text-gray-500">v2.0 — Contry Burger</p>
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center gap-2 text-sm text-gray-400 hover:text-red-400 transition-colors"
+        >
+          <span>🚪</span> Cerrar Sesión
+        </button>
       </div>
     </aside>
   )

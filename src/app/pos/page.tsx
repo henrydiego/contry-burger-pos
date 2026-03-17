@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react"
 import { supabase } from "@/lib/supabase"
-import { Producto, Receta } from "@/lib/types"
+import { Producto, Receta, Inventario } from "@/lib/types"
 
 interface CartItem {
   producto_id: string
@@ -11,11 +11,21 @@ interface CartItem {
   cantidad: number
   precio_unitario: number
   subtotal: number
+  costo_unitario: number
+  costo_total: number
+}
+
+interface StockAlert {
+  ingrediente: string
+  stock_actual: number
+  stock_minimo: number
+  unidad: string
 }
 
 export default function POSPage() {
   const [productos, setProductos] = useState<Producto[]>([])
   const [recetas, setRecetas] = useState<Receta[]>([])
+  const [inventario, setInventario] = useState<Inventario[]>([])
   const [carrito, setCarrito] = useState<CartItem[]>([])
   const [metodoPago, setMetodoPago] = useState("efectivo")
   const [cajero, setCajero] = useState("")
@@ -24,6 +34,8 @@ export default function POSPage() {
   const [loading, setLoading] = useState(true)
   const [procesando, setProcesando] = useState(false)
   const [orderId, setOrderId] = useState("")
+  const [alertasStock, setAlertasStock] = useState<StockAlert[]>([])
+  const [ventaExitosa, setVentaExitosa] = useState("")
 
   const generateOrderId = useCallback(async () => {
     const { data } = await supabase
@@ -39,17 +51,32 @@ export default function POSPage() {
     return "ORD001"
   }, [])
 
+  // Calcular costo real de un producto usando recetas + costo_promedio
+  function calcularCostoProducto(productoId: string): number {
+    const recetasProducto = recetas.filter((r) => r.producto_id === productoId)
+    let costoTotal = 0
+    for (const rec of recetasProducto) {
+      const ing = inventario.find((i) => i.ingrediente_id === rec.ingrediente_id)
+      if (ing) {
+        costoTotal += rec.cantidad * (Number(ing.costo_promedio) || 0)
+      }
+    }
+    return costoTotal
+  }
+
   useEffect(() => {
     loadData()
   }, [])
 
   async function loadData() {
-    const [prodRes, recRes] = await Promise.all([
+    const [prodRes, recRes, invRes] = await Promise.all([
       supabase.from("productos").select("*").eq("activo", true).order("categoria"),
       supabase.from("recetas").select("*"),
+      supabase.from("inventario").select("*"),
     ])
     setProductos(prodRes.data || [])
     setRecetas(recRes.data || [])
+    setInventario(invRes.data || [])
     const newId = await generateOrderId()
     setOrderId(newId)
     setLoading(false)
@@ -64,15 +91,18 @@ export default function POSPage() {
   })
 
   function agregarAlCarrito(producto: Producto) {
+    const costoUnit = calcularCostoProducto(producto.id)
     setCarrito((prev) => {
       const existe = prev.find((item) => item.producto_id === producto.id)
       if (existe) {
+        const nuevaCant = existe.cantidad + 1
         return prev.map((item) =>
           item.producto_id === producto.id
             ? {
                 ...item,
-                cantidad: item.cantidad + 1,
-                subtotal: (item.cantidad + 1) * item.precio_unitario,
+                cantidad: nuevaCant,
+                subtotal: nuevaCant * item.precio_unitario,
+                costo_total: nuevaCant * item.costo_unitario,
               }
             : item
         )
@@ -86,6 +116,8 @@ export default function POSPage() {
           cantidad: 1,
           precio_unitario: producto.precio_venta,
           subtotal: producto.precio_venta,
+          costo_unitario: costoUnit,
+          costo_total: costoUnit,
         },
       ]
     })
@@ -102,6 +134,7 @@ export default function POSPage() {
             ...item,
             cantidad: nuevaCantidad,
             subtotal: nuevaCantidad * item.precio_unitario,
+            costo_total: nuevaCantidad * item.costo_unitario,
           }
         })
         .filter((item): item is CartItem => item !== null)
@@ -113,6 +146,8 @@ export default function POSPage() {
   }
 
   const total = carrito.reduce((s, item) => s + item.subtotal, 0)
+  const costoTotal = carrito.reduce((s, item) => s + item.costo_total, 0)
+  const utilidad = total - costoTotal
 
   async function procesarVenta() {
     if (carrito.length === 0) return
@@ -125,7 +160,7 @@ export default function POSPage() {
       const hoy = new Date().toISOString().split("T")[0]
       const hora = new Date().toTimeString().split(" ")[0]
 
-      // Insert each item as a separate row in ventas
+      // 1. Insert each item as a separate row in ventas
       const ventaRows = carrito.map((item) => ({
         order_id: orderId,
         producto_id: item.producto_id,
@@ -144,31 +179,106 @@ export default function POSPage() {
       const { error } = await supabase.from("ventas").insert(ventaRows)
       if (error) throw error
 
-      // Deduct inventory using recipes
+      // 2. Deduct inventory: update consumo_total AND stock_actual
+      const alertasNuevas: StockAlert[] = []
       for (const item of carrito) {
         const recetasProducto = recetas.filter((r) => r.producto_id === item.producto_id)
         for (const rec of recetasProducto) {
           const cantidadDescontar = rec.cantidad * item.cantidad
-          // Get current stock
           const { data: invData } = await supabase
             .from("inventario")
-            .select("consumo_total")
+            .select("consumo_total, stock_actual, stock_minimo, nombre, unidad")
             .eq("ingrediente_id", rec.ingrediente_id)
             .single()
           if (invData) {
             const nuevoConsumo = (Number(invData.consumo_total) || 0) + cantidadDescontar
+            const nuevoStock = (Number(invData.stock_actual) || 0) - cantidadDescontar
             await supabase
               .from("inventario")
-              .update({ consumo_total: nuevoConsumo })
+              .update({
+                consumo_total: nuevoConsumo,
+                stock_actual: Math.max(0, nuevoStock),
+                ultima_actualizacion: new Date().toISOString(),
+              })
               .eq("ingrediente_id", rec.ingrediente_id)
+
+            // Check stock alert
+            if (nuevoStock <= (Number(invData.stock_minimo) || 0)) {
+              alertasNuevas.push({
+                ingrediente: invData.nombre,
+                stock_actual: Math.max(0, nuevoStock),
+                stock_minimo: Number(invData.stock_minimo) || 0,
+                unidad: invData.unidad,
+              })
+            }
           }
         }
       }
 
-      alert(`Venta ${orderId} registrada: $${total.toFixed(2)}`)
+      // 3. Register in caja_diaria automatically
+      const ventaEfectivo = metodoPago === "efectivo" ? total : 0
+      const ventaTarjeta = metodoPago === "tarjeta" ? total : 0
+      const ventaQr = metodoPago === "qr" ? total : 0
+
+      // Check if caja_diaria exists for today
+      const { data: cajaExistente } = await supabase
+        .from("caja_diaria")
+        .select("*")
+        .eq("fecha", hoy)
+        .limit(1)
+
+      if (cajaExistente && cajaExistente.length > 0) {
+        // Update existing caja_diaria
+        const caja = cajaExistente[0]
+        const newEfectivo = (Number(caja.ventas_efectivo) || 0) + ventaEfectivo
+        const newTarjeta = (Number(caja.ventas_tarjeta) || 0) + ventaTarjeta
+        const newQr = (Number(caja.ventas_qr) || 0) + ventaQr
+        const newTotalIngresos = newEfectivo + newTarjeta + newQr + (Number(caja.otros_ingresos) || 0)
+        const newCajaFinal = (Number(caja.caja_inicial) || 0) + newTotalIngresos - (Number(caja.gastos_dia) || 0)
+
+        await supabase
+          .from("caja_diaria")
+          .update({
+            ventas_efectivo: newEfectivo,
+            ventas_tarjeta: newTarjeta,
+            ventas_qr: newQr,
+            total_ingresos: newTotalIngresos,
+            caja_final: newCajaFinal,
+          })
+          .eq("id", caja.id)
+      } else {
+        // Create new caja_diaria for today
+        const totalIngresos = ventaEfectivo + ventaTarjeta + ventaQr
+        await supabase.from("caja_diaria").insert({
+          fecha: hoy,
+          turno: "Completo",
+          caja_inicial: 0,
+          ventas_efectivo: ventaEfectivo,
+          ventas_tarjeta: ventaTarjeta,
+          ventas_qr: ventaQr,
+          otros_ingresos: 0,
+          total_ingresos: totalIngresos,
+          gastos_dia: 0,
+          caja_final: totalIngresos,
+          diferencia: 0,
+          estado: "Abierta",
+        })
+      }
+
+      // Show alerts if any
+      if (alertasNuevas.length > 0) {
+        setAlertasStock(alertasNuevas)
+      }
+
+      setVentaExitosa(`${orderId} — $${total.toFixed(2)} | Costo: $${costoTotal.toFixed(2)} | Utilidad: $${utilidad.toFixed(2)}`)
       setCarrito([])
       const newId = await generateOrderId()
       setOrderId(newId)
+
+      // Refresh inventory data
+      const { data: invRefresh } = await supabase.from("inventario").select("*")
+      if (invRefresh) setInventario(invRefresh)
+
     } catch (err) {
       console.error(err)
       alert("Error al procesar la venta")
@@ -296,6 +406,15 @@ export default function POSPage() {
             <span className="text-[var(--primary)]">${total.toFixed(2)}</span>
           </div>
 
+          {carrito.length > 0 && (
+            <div className="flex justify-between text-xs text-gray-500 border-t pt-1">
+              <span>Costo: ${costoTotal.toFixed(2)}</span>
+              <span className={utilidad >= 0 ? "text-green-600 font-semibold" : "text-red-600 font-semibold"}>
+                Utilidad: ${utilidad.toFixed(2)}
+              </span>
+            </div>
+          )}
+
           <select
             value={metodoPago}
             onChange={(e) => setMetodoPago(e.target.value)}
@@ -323,7 +442,43 @@ export default function POSPage() {
             </button>
           )}
         </div>
+
+        {/* Venta exitosa notification */}
+        {ventaExitosa && (
+          <div className="p-3 bg-green-50 border-t border-green-200">
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-green-700 font-medium">Venta registrada: {ventaExitosa}</p>
+              <button onClick={() => setVentaExitosa("")} className="text-green-500 text-xs hover:text-green-700">X</button>
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Stock Alerts Modal */}
+      {alertasStock.length > 0 && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-bold text-red-600 mb-3">Alerta de Inventario Bajo</h3>
+            <div className="space-y-2 mb-4">
+              {alertasStock.map((a, i) => (
+                <div key={i} className="flex justify-between items-center bg-red-50 p-2 rounded text-sm">
+                  <span className="font-medium">{a.ingrediente}</span>
+                  <span className="text-red-600">
+                    {a.stock_actual.toFixed(2)} / {a.stock_minimo.toFixed(2)} {a.unidad}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-gray-500 mb-3">Estos ingredientes estan por debajo del stock minimo. Considera hacer una compra.</p>
+            <button
+              onClick={() => setAlertasStock([])}
+              className="w-full bg-red-600 text-white py-2 rounded font-semibold hover:bg-red-700"
+            >
+              Entendido
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
