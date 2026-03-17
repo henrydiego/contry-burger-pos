@@ -5,6 +5,8 @@ export interface Producto {
   costo: number
   precio_venta: number
   activo: boolean
+  imagen_url?: string | null
+  agotado?: boolean
 }
 
 export interface Inventario {

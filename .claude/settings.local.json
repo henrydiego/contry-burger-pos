@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find \"C:\\\\Users\\\\henry diego\\\\pos-restaurant\\\\src\\\\app\" -type f \\\\\\( -name \"*.ts\" -o -name \"*.tsx\" \\\\\\) 2>/dev/null | grep -v \".next\")",
+      "Bash(cd \"/c/Users/henry diego/pos-restaurant\" && SUPABASE_ACCESS_TOKEN=sbp_cc843c9369b2b11d14abea6f8caa3b018ab4c18f npx supabase projects list 2>&1)",
+      "Bash(cd \"/c/Users/henry diego/pos-restaurant\" && SUPABASE_ACCESS_TOKEN=sbp_cc843c9369b2b11d14abea6f8caa3b018ab4c18f npx supabase init --force 2>&1)",
+      "Bash(cd \"/c/Users/henry diego/pos-restaurant\" && SUPABASE_ACCESS_TOKEN=sbp_cc843c9369b2b11d14abea6f8caa3b018ab4c18f npx supabase link --project-ref elnsysbxklwrmiyzixdb 2>&1)",
+      "Bash(cd \"/c/Users/henry diego/pos-restaurant\" && SUPABASE_ACCESS_TOKEN=sbp_cc843c9369b2b11d14abea6f8caa3b018ab4c18f npx supabase db push 2>&1)",
+      "Bash(cd:*)",
+      "Bash(npm install:*)",
+      "Bash(npx tsc:*)",
+      "Bash(ls:*)"
+    ]
+  }
+}
