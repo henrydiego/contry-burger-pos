@@ -9,7 +9,14 @@
       "Bash(cd:*)",
       "Bash(npm install:*)",
       "Bash(npx tsc:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(supabase:*)",
+      "Bash(npx vercel:*)",
+      "Bash(npx next:*)",
+      "Bash(grep -E \"^.*Error.*$\")",
+      "Bash(find 'C:/Users/henry diego/inmobiliaria/src' -name *.ts -o -name *.tsx)",
+      "Bash(claude --version)",
+      "Bash(npm run:*)"
     ]
   }
 }
