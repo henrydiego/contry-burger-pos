@@ -44,6 +44,38 @@ body {
   @apply bg-blue-50;
 }
 
+/* App mobile animations */
+@keyframes slide-up {
+  from { transform: translateY(100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes pop-in {
+  0% { transform: scale(0.8); opacity: 0; }
+  70% { transform: scale(1.05); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+}
+.animate-fade-in {
+  animation: fade-in 0.2s ease forwards;
+}
+.animate-pop-in {
+  animation: pop-in 0.3s ease forwards;
+}
+
+/* Hide scrollbar but keep scroll */
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-behavior: none; }
+
+/* Safe area for bottom nav on iOS */
+.safe-area-pb { padding-bottom: env(safe-area-inset-bottom, 0px); }
+
 /* Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;

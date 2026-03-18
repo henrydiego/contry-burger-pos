@@ -31,7 +31,7 @@ export async function middleware(request: NextRequest) {
   const isPublic =
     pathname.startsWith('/auth') ||
     pathname === '/login' ||
-    pathname.startsWith('/menu/seguimiento') // link compartible de seguimiento
+    pathname.startsWith('/menu') // menú y checkout son públicos, login es opcional
 
   const isMenuRoute = pathname.startsWith('/menu')
   const isAdmin = user?.app_metadata?.role === 'admin'
