@@ -16,7 +16,19 @@
       "Bash(grep -E \"^.*Error.*$\")",
       "Bash(find 'C:/Users/henry diego/inmobiliaria/src' -name *.ts -o -name *.tsx)",
       "Bash(claude --version)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "WebFetch(domain:burgerking.com.bo)",
+      "Read(//c/Users/henry diego/.config/supabase/**)",
+      "Read(//c/Users/HENRYD~1/.config/supabase/**)",
+      "Bash(SUPABASE_ACCESS_TOKEN=sbp_9036e0009d3f3bea3e812b4b4c0aa84a4ad5fd9e npx supabase db execute --project-ref elnsysbxklwrmiyzixdb --sql \"CREATE TABLE IF NOT EXISTS pedidos \\(id SERIAL PRIMARY KEY, order_id TEXT UNIQUE, cliente_nombre TEXT DEFAULT '''', cliente_telefono TEXT DEFAULT '''', cliente_email TEXT, user_id UUID, items JSONB DEFAULT ''[]'', total NUMERIC DEFAULT 0, estado TEXT DEFAULT ''pendiente'', metodo_pago TEXT DEFAULT ''efectivo'', notas TEXT DEFAULT '''', fecha DATE DEFAULT CURRENT_DATE, hora TIME DEFAULT CURRENT_TIME, pago_verificado BOOLEAN DEFAULT false, latitud NUMERIC, longitud NUMERIC, direccion TEXT, descuento NUMERIC DEFAULT 0, cupon_codigo TEXT, costo_envio_aplicado NUMERIC DEFAULT 0, codigo_comprobante TEXT, created_at TIMESTAMPTZ DEFAULT now\\(\\)\\);\")",
+      "Bash(SUPABASE_ACCESS_TOKEN=sbp_9036e0009d3f3bea3e812b4b4c0aa84a4ad5fd9e npx supabase db query --help)",
+      "Bash(SUPABASE_ACCESS_TOKEN=sbp_9036e0009d3f3bea3e812b4b4c0aa84a4ad5fd9e npx supabase link --project-ref elnsysbxklwrmiyzixdb)",
+      "Bash(SUPABASE_ACCESS_TOKEN=sbp_9036e0009d3f3bea3e812b4b4c0aa84a4ad5fd9e npx supabase db query --linked \"CREATE TABLE IF NOT EXISTS pedidos \\(id SERIAL PRIMARY KEY, order_id TEXT UNIQUE, cliente_nombre TEXT DEFAULT '''', cliente_telefono TEXT DEFAULT '''', cliente_email TEXT, user_id UUID, items JSONB DEFAULT ''[]'', total NUMERIC DEFAULT 0, estado TEXT DEFAULT ''pendiente'', metodo_pago TEXT DEFAULT ''efectivo'', notas TEXT DEFAULT '''', fecha DATE DEFAULT CURRENT_DATE, hora TIME DEFAULT CURRENT_TIME, pago_verificado BOOLEAN DEFAULT false, latitud NUMERIC, longitud NUMERIC, direccion TEXT, descuento NUMERIC DEFAULT 0, cupon_codigo TEXT, costo_envio_aplicado NUMERIC DEFAULT 0, codigo_comprobante TEXT, created_at TIMESTAMPTZ DEFAULT now\\(\\)\\);\")",
+      "Bash(SUPABASE_ACCESS_TOKEN=sbp_9036e0009d3f3bea3e812b4b4c0aa84a4ad5fd9e npx supabase db query --linked \"ALTER TABLE pedidos ENABLE ROW LEVEL SECURITY; DROP POLICY IF EXISTS \"\"Allow all\"\" ON pedidos; CREATE POLICY \"\"Allow all\"\" ON pedidos FOR ALL USING \\(true\\) WITH CHECK \\(true\\);\")",
+      "Bash(SUPABASE_ACCESS_TOKEN=sbp_9036e0009d3f3bea3e812b4b4c0aa84a4ad5fd9e npx supabase db query --linked \"SELECT column_name, data_type FROM information_schema.columns WHERE table_name = ''pedidos'' ORDER BY ordinal_position;\")",
+      "Bash(SUPABASE_ACCESS_TOKEN=sbp_9036e0009d3f3bea3e812b4b4c0aa84a4ad5fd9e npx supabase db query --linked \"SELECT table_name FROM information_schema.tables WHERE table_schema = ''public'' ORDER BY table_name;\")",
+      "Bash(SUPABASE_ACCESS_TOKEN=sbp_9036e0009d3f3bea3e812b4b4c0aa84a4ad5fd9e npx supabase db query --linked \":*)",
+      "Bash(SUPABASE_ACCESS_TOKEN=sbp_9036e0009d3f3bea3e812b4b4c0aa84a4ad5fd9e npx supabase db query --linked -f create_tables.sql)"
     ]
   }
 }

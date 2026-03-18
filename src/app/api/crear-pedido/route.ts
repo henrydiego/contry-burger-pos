@@ -12,18 +12,18 @@ function getServiceClient() {
 
 export async function POST(req: NextRequest) {
   try {
-    const cookieStore = cookies()
-    const supabaseAuth = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll: () => cookieStore.getAll(),
-          setAll: (cookiesToSet) => cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options)),
-        },
-      }
-    )
-    const { data: { user } } = await supabaseAuth.auth.getUser()
+    // Obtener usuario si tiene sesión (invitados permitidos, no requerido)
+    let user = null
+    try {
+      const cookieStore = cookies()
+      const supabaseAuth = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        { cookies: { getAll: () => cookieStore.getAll(), setAll: () => {} } }
+      )
+      const { data: { user: u } } = await supabaseAuth.auth.getUser()
+      user = u
+    } catch { /* continuar como invitado */ }
 
     const body = await req.json()
     const {
@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
       itemsVerificados.push({ producto_id: producto.id, nombre: producto.nombre, cantidad, precio_unitario: precio, subtotal: itemSubtotal })
     }
 
-    const { data: cfg } = await supabase.from('configuracion').select('costo_envio, pedido_minimo').eq('id', 1).single()
+    const { data: cfg } = await supabase.from('configuracion').select('costo_envio, pedido_minimo').eq('id', 1).maybeSingle()
     const esDelivery = tipo_entrega === 'delivery'
     const costoEnvio = (esDelivery && latitud) ? Number(cfg?.costo_envio ?? 0) : 0
     const pedidoMinimo = Number(cfg?.pedido_minimo ?? 0)
@@ -152,7 +152,7 @@ export async function POST(req: NextRequest) {
       await supabase.rpc('incrementar_uso_cupon', { p_codigo: cuponValido }).maybeSingle()
     }
 
-    const { data: cfg2 } = await supabase.from('configuracion').select('whatsapp_phone').eq('id', 1).single()
+    const { data: cfg2 } = await supabase.from('configuracion').select('whatsapp_phone').eq('id', 1).maybeSingle()
 
     const origin = new URL(req.url).origin
     fetch(`${origin}/api/notify-order`, {
