@@ -3,8 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
-// Cliente con service role para leer precios reales (no manipulables por el cliente)
-// Usa anon key como fallback si service role no está configurado (seguro mientras no haya RLS activo)
+// Usa service role si está disponible, anon key como fallback
 function getServiceClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -24,7 +23,7 @@ export async function POST(req: NextRequest) {
         },
       }
     )
-    const { data: { user } } = await supabaseAuth.auth.getUser() // user can be null for guests
+    const { data: { user } } = await supabaseAuth.auth.getUser()
 
     const body = await req.json()
     const {
@@ -33,12 +32,10 @@ export async function POST(req: NextRequest) {
       tipo_entrega, numero_mesa,
     } = body
 
-    if (!items || !Array.isArray(items) || items.length === 0) {
+    if (!items || !Array.isArray(items) || items.length === 0)
       return NextResponse.json({ error: 'El carrito está vacío.' }, { status: 400 })
-    }
-    if (!cliente_nombre?.trim() || !cliente_telefono?.trim()) {
+    if (!cliente_nombre?.trim() || !cliente_telefono?.trim())
       return NextResponse.json({ error: 'Nombre y teléfono son requeridos.' }, { status: 400 })
-    }
 
     const supabase = getServiceClient()
 
@@ -49,49 +46,30 @@ export async function POST(req: NextRequest) {
       .in('id', productoIds)
 
     if (prodError) throw new Error(`Error fetching products: ${prodError.message}`)
-    if (!productos) return NextResponse.json({ error: 'No se encontraron los productos solicitados.' }, { status: 404 })
+    if (!productos) return NextResponse.json({ error: 'No se encontraron los productos.' }, { status: 404 })
 
     let subtotal = 0
     const itemsVerificados: { producto_id: string; nombre: string; cantidad: number; precio_unitario: number; subtotal: number }[] = []
 
     for (const item of items) {
-      const producto = productos.find((p) => p.id === item.producto_id)
+      const producto = productos.find(p => p.id === item.producto_id)
       if (!producto) return NextResponse.json({ error: `Producto no encontrado: ${item.producto_id}` }, { status: 400 })
       if (!producto.activo) return NextResponse.json({ error: `Producto no disponible: ${producto.nombre}` }, { status: 400 })
       if (producto.agotado) return NextResponse.json({ error: `Producto agotado: ${producto.nombre}` }, { status: 400 })
-
       const cantidad = Math.max(1, Math.floor(Number(item.cantidad) || 1))
       const precio = Number(producto.precio_venta)
       const itemSubtotal = precio * cantidad
       subtotal += itemSubtotal
-
-      itemsVerificados.push({
-        producto_id: producto.id,
-        nombre: producto.nombre,
-        cantidad,
-        precio_unitario: precio,
-        subtotal: itemSubtotal,
-      })
+      itemsVerificados.push({ producto_id: producto.id, nombre: producto.nombre, cantidad, precio_unitario: precio, subtotal: itemSubtotal })
     }
 
-    const { data: cfg } = await supabase.from('configuracion').select('costo_envio, pedido_minimo, whatsapp_phone').eq('id', 1).single()
+    const { data: cfg } = await supabase.from('configuracion').select('costo_envio, pedido_minimo').eq('id', 1).single()
     const esDelivery = tipo_entrega === 'delivery'
     const costoEnvio = (esDelivery && latitud) ? Number(cfg?.costo_envio ?? 0) : 0
-
-    // Construir descripción de entrega
-    let direccionFinal: string | null = null
-    if (tipo_entrega === 'mesa') {
-      direccionFinal = `Mesa #${numero_mesa || '?'}`
-    } else if (tipo_entrega === 'local') {
-      direccionFinal = 'Recoger en local'
-    } else {
-      direccionFinal = direccion?.trim() || null
-    }
     const pedidoMinimo = Number(cfg?.pedido_minimo ?? 0)
 
-    if (pedidoMinimo > 0 && subtotal < pedidoMinimo) {
+    if (pedidoMinimo > 0 && subtotal < pedidoMinimo)
       return NextResponse.json({ error: `El pedido mínimo es $${pedidoMinimo.toFixed(2)}` }, { status: 400 })
-    }
 
     let descuento = 0
     let cuponValido: string | null = null
@@ -110,26 +88,36 @@ export async function POST(req: NextRequest) {
 
     const total = subtotal + costoEnvio - descuento
 
-    const { data: last } = await supabase.from('pedidos').select('order_id').order('id', { ascending: false }).limit(1).maybeSingle()
-    const num = parseInt(String(last?.order_id || 'PED000').replace('PED', '')) || 0
-    const newOrderId = `PED${String(num + 1).padStart(3, '0')}`
-    
     const hora = new Date().toTimeString().split(' ')[0]
     const hoy = new Date().toISOString().split('T')[0]
 
-    const { error: insertError } = await supabase.from('pedidos').insert({
-      order_id: newOrderId,
+    // Construir descripción de entrega
+    let direccionFinal: string | null = null
+    if (tipo_entrega === 'mesa') direccionFinal = `Mesa #${numero_mesa || '?'}`
+    else if (tipo_entrega === 'local') direccionFinal = 'Recoger en local'
+    else direccionFinal = direccion?.trim() || null
+
+    // Notas combinadas (fallback si faltan columnas extendidas)
+    const notasBase = [notas?.trim(), direccionFinal].filter(Boolean).join(' | ') || ''
+
+    // Campos base (siempre existen)
+    const baseData = {
       cliente_nombre: cliente_nombre.trim(),
       cliente_telefono: cliente_telefono.trim(),
-      cliente_email: user?.email || null,
-      user_id: user?.id || null,
       items: itemsVerificados,
       total,
       estado: 'pendiente',
       metodo_pago: metodo_pago || 'efectivo',
-      notas: notas?.trim() || '',
+      notas: notasBase,
       fecha: hoy,
       hora,
+    }
+
+    // Campos extendidos (pueden no existir si no se corrió la migración SQL)
+    const extendedData = {
+      ...baseData,
+      cliente_email: user?.email || null,
+      user_id: user?.id || null,
       pago_verificado: false,
       latitud: esDelivery ? (latitud || null) : null,
       longitud: esDelivery ? (longitud || null) : null,
@@ -137,31 +125,50 @@ export async function POST(req: NextRequest) {
       descuento,
       cupon_codigo: cuponValido,
       costo_envio_aplicado: costoEnvio,
-    })
-
-    if (insertError) {
-      console.error('Error inserting order:', insertError)
-      return NextResponse.json({ error: `Error de base de datos al crear el pedido: ${insertError.message}` }, { status: 500 })
     }
+
+    // Insertar y obtener el id generado para usar como número de pedido
+    let insertedId: number | null = null
+
+    const result1 = await supabase.from('pedidos').insert(extendedData).select('id').single()
+    if (!result1.error && result1.data) {
+      insertedId = result1.data.id
+    } else {
+      console.warn('Insert extendido falló, reintentando con campos base:', result1.error?.message)
+      const result2 = await supabase.from('pedidos').insert(baseData).select('id').single()
+      if (!result2.error && result2.data) {
+        insertedId = result2.data.id
+      } else {
+        console.error('Error al insertar pedido:', result2.error)
+        return NextResponse.json({ error: `Error al guardar el pedido: ${result2.error?.message}` }, { status: 500 })
+      }
+    }
+
+    // El número de pedido es el id autoincremental (1, 2, 3...)
+    const newOrderId = `#${insertedId}`
+    await supabase.from('pedidos').update({ order_id: newOrderId }).eq('id', insertedId!)
 
     if (cuponValido) {
       await supabase.rpc('incrementar_uso_cupon', { p_codigo: cuponValido }).maybeSingle()
     }
+
+    const { data: cfg2 } = await supabase.from('configuracion').select('whatsapp_phone').eq('id', 1).single()
 
     const origin = new URL(req.url).origin
     fetch(`${origin}/api/notify-order`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        order_id: newOrderId, cliente_nombre: cliente_nombre.trim(), total, metodo_pago: metodo_pago || 'efectivo',
-        items: itemsVerificados, latitud, longitud, direccion: direccion?.trim() || null,
+        order_id: newOrderId, cliente_nombre: cliente_nombre.trim(), total,
+        metodo_pago: metodo_pago || 'efectivo', items: itemsVerificados,
+        latitud: esDelivery ? latitud : null, longitud: esDelivery ? longitud : null,
+        direccion: direccionFinal,
       }),
-    }).catch((err) => console.error('Error sending notification (non-blocking):', err))
+    }).catch(err => console.error('Error en notificación:', err))
 
-    return NextResponse.json({ ok: true, order_id: newOrderId })
+    return NextResponse.json({ ok: true, order_id: newOrderId, whatsapp_phone: cfg2?.whatsapp_phone || null })
   } catch (err) {
-    console.error('Error crítico en API /crear-pedido:', err)
-    const message = err instanceof Error ? err.message : 'Un error desconocido ocurrió.'
-    return NextResponse.json({ error: `Error interno del servidor: ${message}` }, { status: 500 })
+    console.error('Error en /api/crear-pedido:', err)
+    return NextResponse.json({ error: `Error interno: ${err instanceof Error ? err.message : 'desconocido'}` }, { status: 500 })
   }
 }
