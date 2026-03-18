@@ -284,7 +284,7 @@ export default function ConfigPage() {
           <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 space-y-2">
             <p className="font-semibold text-yellow-800 text-sm">Configuración CallMeBot (gratis)</p>
             <ol className="text-sm text-yellow-700 space-y-1 list-decimal list-inside">
-              <li>Guarda el número <strong>+34 644 04 45 44</strong> en tu WhatsApp como "CallMeBot"</li>
+              <li>Guarda el número <strong>+34 644 04 45 44</strong> en tu WhatsApp como &quot;CallMeBot&quot;</li>
               <li>Envíale el mensaje: <strong>I allow callmebot.com to send me messages</strong></li>
               <li>Recibirás un mensaje con tu <strong>API Key</strong></li>
               <li>Pega tu número (con código país, sin +) y el API Key abajo</li>
