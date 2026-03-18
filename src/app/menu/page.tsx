@@ -62,6 +62,8 @@ export default function MenuPublico() {
   const [cliente, setCliente] = useState({
     nombre: "", telefono: "", notas: "", metodo_pago: "efectivo",
     direccion: "", latitud: null as number | null, longitud: null as number | null,
+    tipo_entrega: "local" as "local" | "mesa" | "delivery",
+    numero_mesa: "",
   })
 
   useEffect(() => {
@@ -100,7 +102,7 @@ export default function MenuPublico() {
   async function logoutCliente() {
     await supabase.auth.signOut()
     setGoogleUser(null)
-    setCliente({ nombre: "", telefono: "", notas: "", metodo_pago: "efectivo", direccion: "", latitud: null, longitud: null })
+    setCliente({ nombre: "", telefono: "", notas: "", metodo_pago: "efectivo", direccion: "", latitud: null, longitud: null, tipo_entrega: "local", numero_mesa: "" })
   }
 
   async function loginConGoogle() {
@@ -182,6 +184,7 @@ export default function MenuPublico() {
           notas: cliente.notas, metodo_pago: cliente.metodo_pago,
           latitud: cliente.latitud, longitud: cliente.longitud,
           direccion: cliente.direccion, cupon_codigo: cuponAplicado?.codigo || null,
+          tipo_entrega: cliente.tipo_entrega, numero_mesa: cliente.numero_mesa,
         }),
       })
       const data = await res.json()
@@ -315,34 +318,64 @@ export default function MenuPublico() {
                 <select value={cliente.metodo_pago} onChange={e => setCliente({ ...cliente, metodo_pago: e.target.value })}
                   className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-red-500 transition-colors">
                   <option value="efectivo">💵 Pago en Efectivo</option>
-                  <option value="tarjeta">💳 Pago con Tarjeta</option>
-                  <option value="qr">📱 Pago QR / Yape / BCP</option>
+                  <option value="qr">📱 Pago QR / Transferencia</option>
                 </select>
               </div>
 
-              {/* Ubicación */}
+              {/* Tipo de entrega */}
               <div className="bg-gray-900 rounded-2xl p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-semibold text-sm text-gray-300">📍 Delivery (opcional)</h3>
-                  {config.costo_envio > 0 && <span className="text-xs text-blue-400 bg-blue-950/60 border border-blue-900/40 px-2 py-0.5 rounded-full">+${config.costo_envio.toFixed(2)} envío</span>}
+                <h3 className="font-semibold text-sm text-gray-300">¿Cómo quieres tu pedido?</h3>
+                <div className="grid grid-cols-3 gap-2">
+                  {([
+                    { id: "local", icon: "🏪", label: "Recoger en local" },
+                    { id: "mesa", icon: "🪑", label: "Para la mesa" },
+                    { id: "delivery", icon: "🚗", label: "Delivery" },
+                  ] as const).map(({ id, icon, label }) => (
+                    <button key={id} onClick={() => setCliente(c => ({ ...c, tipo_entrega: id }))}
+                      className={`flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl border transition-all active:scale-95 text-center ${
+                        cliente.tipo_entrega === id
+                          ? "bg-red-600/20 border-red-500 text-white"
+                          : "bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-500"
+                      }`}>
+                      <span className="text-2xl">{icon}</span>
+                      <span className="text-xs font-semibold leading-tight">{label}</span>
+                    </button>
+                  ))}
                 </div>
-                {cliente.latitud ? (
-                  <div className="flex items-center justify-between bg-green-950/40 border border-green-900/40 rounded-xl px-3 py-2.5">
-                    <span className="text-green-400 text-sm font-medium">✅ Ubicación capturada</span>
-                    <div className="flex gap-3">
-                      <a href={`https://www.google.com/maps?q=${cliente.latitud},${cliente.longitud}`} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400 underline">Ver mapa</a>
-                      <button onClick={() => setCliente(c => ({ ...c, latitud: null, longitud: null }))} className="text-xs text-red-400 underline">Quitar</button>
-                    </div>
-                  </div>
-                ) : (
-                  <button onClick={obtenerUbicacion} disabled={gpsLoading}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl text-sm font-semibold disabled:opacity-60 flex items-center justify-center gap-2 transition-colors active:scale-95">
-                    {gpsLoading ? <><Spinner />Obteniendo...</> : "📍 Compartir mi ubicación GPS"}
-                  </button>
+
+                {/* Mesa: número */}
+                {cliente.tipo_entrega === "mesa" && (
+                  <input type="number" placeholder="Número de mesa *" value={cliente.numero_mesa}
+                    onChange={e => setCliente({ ...cliente, numero_mesa: e.target.value })}
+                    min="1"
+                    className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500/50 placeholder:text-gray-600 transition-colors" />
                 )}
-                <input type="text" placeholder="Dirección o referencia (opcional)" value={cliente.direccion}
-                  onChange={e => setCliente({ ...cliente, direccion: e.target.value })}
-                  className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 placeholder:text-gray-600 transition-colors" />
+
+                {/* Delivery: GPS + dirección */}
+                {cliente.tipo_entrega === "delivery" && (
+                  <div className="space-y-2">
+                    {config.costo_envio > 0 && (
+                      <p className="text-xs text-blue-400 text-center">Costo de envío: +${config.costo_envio.toFixed(2)}</p>
+                    )}
+                    {cliente.latitud ? (
+                      <div className="flex items-center justify-between bg-green-950/40 border border-green-900/40 rounded-xl px-3 py-2.5">
+                        <span className="text-green-400 text-sm font-medium">✅ Ubicación capturada</span>
+                        <div className="flex gap-3">
+                          <a href={`https://www.google.com/maps?q=${cliente.latitud},${cliente.longitud}`} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400 underline">Ver mapa</a>
+                          <button onClick={() => setCliente(c => ({ ...c, latitud: null, longitud: null }))} className="text-xs text-red-400 underline">Quitar</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button onClick={obtenerUbicacion} disabled={gpsLoading}
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl text-sm font-semibold disabled:opacity-60 flex items-center justify-center gap-2 transition-colors active:scale-95">
+                        {gpsLoading ? <><Spinner />Obteniendo...</> : "📍 Compartir mi ubicación GPS"}
+                      </button>
+                    )}
+                    <input type="text" placeholder="Dirección o referencia" value={cliente.direccion}
+                      onChange={e => setCliente({ ...cliente, direccion: e.target.value })}
+                      className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 placeholder:text-gray-600 transition-colors" />
+                  </div>
+                )}
               </div>
 
               {/* Cupón */}
@@ -368,7 +401,7 @@ export default function MenuPublico() {
               </div>
 
               <button onClick={() => setStep("confirmacion")}
-                disabled={!cliente.nombre.trim() || !cliente.telefono.trim()}
+                disabled={!cliente.nombre.trim() || !cliente.telefono.trim() || (cliente.tipo_entrega === "mesa" && !cliente.numero_mesa.trim())}
                 className="w-full bg-red-600 hover:bg-red-700 text-white py-4 rounded-2xl font-black text-base transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-red-900/30">
                 Continuar →
               </button>
@@ -384,22 +417,27 @@ export default function MenuPublico() {
                   ["Nombre", cliente.nombre],
                   ["Teléfono", cliente.telefono],
                   ...(cliente.notas ? [["Notas", cliente.notas]] : []),
-                  ["Pago", cliente.metodo_pago === "qr" ? "QR / Yape / BCP" : cliente.metodo_pago === "tarjeta" ? "Tarjeta" : "Efectivo"],
+                  ["Pago", cliente.metodo_pago === "qr" ? "QR / Transferencia" : "Efectivo"],
                 ].map(([label, value]) => (
                   <div key={label} className="flex justify-between">
                     <span className="text-gray-500">{label}</span>
                     <span className="text-white text-right max-w-[60%]">{value}</span>
                   </div>
                 ))}
-                {(cliente.latitud || cliente.direccion) && (
-                  <div className="flex justify-between items-start">
-                    <span className="text-gray-500">Entrega</span>
-                    <div className="text-right space-y-0.5">
-                      {cliente.latitud && <a href={`https://www.google.com/maps?q=${cliente.latitud},${cliente.longitud}`} target="_blank" rel="noopener noreferrer" className="text-blue-400 underline text-xs block">📍 Ver en mapa</a>}
-                      {cliente.direccion && <span className="text-white block">{cliente.direccion}</span>}
-                    </div>
+                <div className="flex justify-between items-start">
+                  <span className="text-gray-500">Entrega</span>
+                  <div className="text-right space-y-0.5">
+                    {cliente.tipo_entrega === "local" && <span className="text-white">🏪 Recoger en local</span>}
+                    {cliente.tipo_entrega === "mesa" && <span className="text-white">🪑 Mesa #{cliente.numero_mesa}</span>}
+                    {cliente.tipo_entrega === "delivery" && (
+                      <>
+                        <span className="text-white block">🚗 Delivery</span>
+                        {cliente.latitud && <a href={`https://www.google.com/maps?q=${cliente.latitud},${cliente.longitud}`} target="_blank" rel="noopener noreferrer" className="text-blue-400 underline text-xs block">📍 Ver en mapa</a>}
+                        {cliente.direccion && <span className="text-gray-300 text-xs block">{cliente.direccion}</span>}
+                      </>
+                    )}
                   </div>
-                )}
+                </div>
               </div>
 
               <div className="bg-gray-900 rounded-2xl p-4 space-y-2">
@@ -432,7 +470,7 @@ export default function MenuPublico() {
 
               <button onClick={enviarPedido} disabled={enviando}
                 className="w-full bg-red-600 hover:bg-red-700 text-white py-4 rounded-2xl font-black text-base transition-all active:scale-95 disabled:opacity-50 shadow-lg shadow-red-900/30">
-                {enviando ? "Enviando pedido..." : cliente.metodo_pago === "qr" ? "✅ Ya pagué · Confirmar pedido" : "🍔 Confirmar Pedido"}
+                {enviando ? "Enviando pedido..." : cliente.metodo_pago === "qr" ? "✅ Ya transferí · Confirmar pedido" : "🍔 Confirmar Pedido"}
               </button>
             </>
           )}

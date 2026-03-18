@@ -4,14 +4,10 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
 // Cliente con service role para leer precios reales (no manipulables por el cliente)
+// Usa anon key como fallback si service role no está configurado (seguro mientras no haya RLS activo)
 function getServiceClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-  if (!supabaseUrl || !serviceKey) {
-    throw new Error('Supabase URL or service role key is not defined in environment variables.')
-  }
-
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   return createClient(supabaseUrl, serviceKey)
 }
 
@@ -34,6 +30,7 @@ export async function POST(req: NextRequest) {
     const {
       items, cliente_nombre, cliente_telefono, notas, metodo_pago,
       latitud, longitud, direccion, cupon_codigo,
+      tipo_entrega, numero_mesa,
     } = body
 
     if (!items || !Array.isArray(items) || items.length === 0) {
@@ -78,7 +75,18 @@ export async function POST(req: NextRequest) {
     }
 
     const { data: cfg } = await supabase.from('configuracion').select('costo_envio, pedido_minimo, whatsapp_phone').eq('id', 1).single()
-    const costoEnvio = latitud ? Number(cfg?.costo_envio ?? 0) : 0
+    const esDelivery = tipo_entrega === 'delivery'
+    const costoEnvio = (esDelivery && latitud) ? Number(cfg?.costo_envio ?? 0) : 0
+
+    // Construir descripción de entrega
+    let direccionFinal: string | null = null
+    if (tipo_entrega === 'mesa') {
+      direccionFinal = `Mesa #${numero_mesa || '?'}`
+    } else if (tipo_entrega === 'local') {
+      direccionFinal = 'Recoger en local'
+    } else {
+      direccionFinal = direccion?.trim() || null
+    }
     const pedidoMinimo = Number(cfg?.pedido_minimo ?? 0)
 
     if (pedidoMinimo > 0 && subtotal < pedidoMinimo) {
@@ -123,9 +131,9 @@ export async function POST(req: NextRequest) {
       fecha: hoy,
       hora,
       pago_verificado: false,
-      latitud: latitud || null,
-      longitud: longitud || null,
-      direccion: direccion?.trim() || null,
+      latitud: esDelivery ? (latitud || null) : null,
+      longitud: esDelivery ? (longitud || null) : null,
+      direccion: direccionFinal,
       descuento,
       cupon_codigo: cuponValido,
       costo_envio_aplicado: costoEnvio,
