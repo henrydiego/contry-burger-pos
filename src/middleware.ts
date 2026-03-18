@@ -27,40 +27,37 @@ export async function middleware(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname
 
-  // Rutas completamente públicas (no requieren auth)
+  // Rutas completamente públicas (sin auth)
   const isPublic =
-    pathname.startsWith('/menu') ||
     pathname.startsWith('/auth') ||
-    pathname === '/login'
+    pathname === '/login' ||
+    pathname.startsWith('/menu/seguimiento') // link compartible de seguimiento
 
-  // El usuario es admin si tiene role='admin' en app_metadata (solo Supabase puede escribir esto)
+  const isMenuRoute = pathname.startsWith('/menu')
   const isAdmin = user?.app_metadata?.role === 'admin'
 
-  // --- Lógica de acceso ---
-
-  // 1. Rutas públicas: dejar pasar siempre
-  if (isPublic) {
-    // Si ya está logueado y va a /login:
-    // - admin → redirigir al dashboard
-    // - cliente Google → redirigir a /menu
-    if (user && pathname === '/login') {
-      const url = request.nextUrl.clone()
-      url.pathname = isAdmin ? '/' : '/menu'
-      return NextResponse.redirect(url)
-    }
-    return supabaseResponse
-  }
-
-  // 2. Rutas admin (todo lo que no es público):
-  // Sin login → ir a /login
+  // Sin sesión → redirigir a /login
   if (!user) {
+    if (isPublic) return supabaseResponse
     const url = request.nextUrl.clone()
     url.pathname = '/login'
+    // Para rutas de menú, pasar el destino para redirigir al volver
+    if (isMenuRoute) url.searchParams.set('next', pathname)
     return NextResponse.redirect(url)
   }
 
-  // Logueado pero no es admin → redirigir a /menu (cliente de Google)
-  if (!isAdmin) {
+  // Ya logueado y va a /login → redirigir según rol
+  if (pathname === '/login') {
+    const url = request.nextUrl.clone()
+    url.pathname = isAdmin ? '/' : '/menu'
+    return NextResponse.redirect(url)
+  }
+
+  // Rutas públicas con sesión activa → dejar pasar
+  if (isPublic) return supabaseResponse
+
+  // Cliente Google (no admin): solo puede acceder a /menu
+  if (!isAdmin && !isMenuRoute) {
     const url = request.nextUrl.clone()
     url.pathname = '/menu'
     return NextResponse.redirect(url)

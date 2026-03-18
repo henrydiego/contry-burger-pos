@@ -64,7 +64,6 @@ export default function MenuPublico() {
     costo_envio: 0, pedido_minimo: 0, mensaje_bienvenida: "", whatsapp_phone: "",
   })
   const [googleUser, setGoogleUser] = useState<{ name: string; email: string } | null>(null)
-  const [loginLoading, setLoginLoading] = useState(false)
   const [gpsLoading, setGpsLoading] = useState(false)
   const [cuponInput, setCuponInput] = useState("")
   const [cuponAplicado, setCuponAplicado] = useState<{ codigo: string; descuento: number } | null>(null)
@@ -110,14 +109,6 @@ export default function MenuPublico() {
     setProductos(prods || [])
     if (cfg) setConfig({ ...config, ...cfg })
     setLoading(false)
-  }
-
-  async function loginConGoogle() {
-    setLoginLoading(true)
-    await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: `${window.location.origin}/auth/callback?next=/menu` },
-    })
   }
 
   async function logoutCliente() {
@@ -193,57 +184,30 @@ export default function MenuPublico() {
     if (!cliente.nombre.trim() || !cliente.telefono.trim()) {
       alert("Por favor ingresa tu nombre y teléfono"); return
     }
-    if (config.pedido_minimo > 0 && subtotalProductos < config.pedido_minimo) {
-      alert(`El pedido mínimo es $${config.pedido_minimo.toFixed(2)}`); return
-    }
     setEnviando(true)
     try {
-      const { data: last } = await supabase.from("pedidos").select("order_id").order("id", { ascending: false }).limit(1)
-      let newOrderId = "PED001"
-      if (last && last.length > 0) {
-        const num = parseInt(String(last[0].order_id || "PED000").replace("PED", "")) || 0
-        newOrderId = `PED${String(num + 1).padStart(3, "0")}`
-      }
-
-      const hora = new Date().toTimeString().split(" ")[0]
-      const hoy = new Date().toISOString().split("T")[0]
-      const { data: { user } } = await supabase.auth.getUser()
-
-      const { error } = await supabase.from("pedidos").insert({
-        order_id: newOrderId,
-        cliente_nombre: cliente.nombre.trim(),
-        cliente_telefono: cliente.telefono.trim(),
-        cliente_email: user?.email || null,
-        user_id: user?.id || null,
-        items: carrito,
-        total,
-        estado: "pendiente",
-        metodo_pago: cliente.metodo_pago,
-        notas: cliente.notas.trim(),
-        fecha: hoy, hora,
-        pago_verificado: false,
-        latitud: cliente.latitud,
-        longitud: cliente.longitud,
-        direccion: cliente.direccion.trim() || null,
-        descuento,
-        cupon_codigo: cuponAplicado?.codigo || null,
-        costo_envio_aplicado: costoEnvio,
-      })
-      if (error) throw error
-
-      // Incrementar uso del cupón
-      if (cuponAplicado) {
-        await supabase.rpc('incrementar_uso_cupon', { p_codigo: cuponAplicado.codigo }).maybeSingle()
-      }
-
-      // Notificación WhatsApp (no bloqueante)
-      fetch("/api/notify-order", {
+      const res = await fetch("/api/crear-pedido", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ order_id: newOrderId, cliente_nombre: cliente.nombre, total, metodo_pago: cliente.metodo_pago, items: carrito, latitud: cliente.latitud, longitud: cliente.longitud, direccion: cliente.direccion }),
-      }).catch(() => {})
-
-      router.push(`/menu/seguimiento?order=${newOrderId}`)
+        body: JSON.stringify({
+          items: carrito.map((i) => ({ producto_id: i.producto_id, cantidad: i.cantidad })),
+          cliente_nombre: cliente.nombre,
+          cliente_telefono: cliente.telefono,
+          notas: cliente.notas,
+          metodo_pago: cliente.metodo_pago,
+          latitud: cliente.latitud,
+          longitud: cliente.longitud,
+          direccion: cliente.direccion,
+          cupon_codigo: cuponAplicado?.codigo || null,
+        }),
+      })
+      const data = await res.json()
+      if (!data.ok) {
+        alert(data.error || "Error al enviar el pedido. Intenta de nuevo.")
+        setEnviando(false)
+        return
+      }
+      router.push(`/menu/seguimiento?order=${data.order_id}`)
     } catch (err) {
       console.error(err)
       alert("Error al enviar el pedido. Intenta de nuevo.")
@@ -276,25 +240,12 @@ export default function MenuPublico() {
             <p className="text-xs text-gray-400">⏱ {config.tiempo_estimado}</p>
           </div>
           <div className="flex items-center gap-2 min-w-0">
-            {googleUser ? (
+            {googleUser && (
               <div className="flex items-center gap-2 min-w-0">
                 <span className="text-xs text-gray-300 truncate max-w-[90px] hidden sm:block">{googleUser.name}</span>
+                <a href="/menu/mis-pedidos" className="text-xs text-gray-400 hover:text-white shrink-0 hidden sm:block">Mis pedidos</a>
                 <button onClick={logoutCliente} className="text-xs text-gray-400 hover:text-white shrink-0">Salir</button>
               </div>
-            ) : (
-              <button onClick={loginConGoogle} disabled={loginLoading}
-                className="flex items-center gap-1.5 bg-white text-gray-800 text-xs font-semibold px-2.5 py-1.5 rounded-full hover:bg-gray-100 disabled:opacity-60 shrink-0">
-                <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 48 48">
-                  <path fill="#FFC107" d="M43.6 20H24v8h11.3C33.6 32.8 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.7 1.1 7.8 2.9l5.7-5.7C34.1 6.7 29.3 4.5 24 4.5 12.7 4.5 3.5 13.7 3.5 25S12.7 45.5 24 45.5c11 0 20.5-8 20.5-20.5 0-1.4-.1-2.7-.4-4z"/>
-                  <path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.5 16 19 12 24 12c3 0 5.7 1.1 7.8 2.9l5.7-5.7C34.1 6.7 29.3 4.5 24 4.5c-7.7 0-14.3 4.4-17.7 10.2z"/>
-                  <path fill="#4CAF50" d="M24 45.5c5.2 0 9.9-1.9 13.4-5l-6.2-5.3C29.3 37 26.8 38 24 38c-5.2 0-9.6-3.2-11.3-7.8l-6.5 5C9.6 41 16.3 45.5 24 45.5z"/>
-                  <path fill="#1976D2" d="M43.6 20H24v8h11.3c-.8 2.2-2.3 4.1-4.1 5.4l6.2 5.3c3.6-3.3 5.8-8.3 5.8-14.2 0-1.4-.1-2.7-.4-4z"/>
-                </svg>
-                <span>Google</span>
-              </button>
-            )}
-            {googleUser && (
-              <a href="/menu/mis-pedidos" className="text-xs text-gray-400 hover:text-white shrink-0 hidden sm:block">Mis pedidos</a>
             )}
             {carrito.length > 0 && step === "menu" && (
               <button onClick={() => setStep("datos")} className="bg-red-600 text-white px-3 py-1.5 rounded-lg text-sm font-bold shrink-0">
