@@ -77,14 +77,29 @@ export default function MenuPublico() {
 
   useEffect(() => {
     loadAll()
-    checkGoogleUser()
     // Repetir pedido desde historial
     const savedCart = sessionStorage.getItem("repeat_order")
     if (savedCart) {
       try { setCarrito(JSON.parse(savedCart)) } catch { /* ignore */ }
       sessionStorage.removeItem("repeat_order")
     }
+
+    // Detectar sesión activa y cambios de auth
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) applyUser(session.user)
+    })
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) applyUser(session.user)
+      else { setGoogleUser(null) }
+    })
+    return () => subscription.unsubscribe()
   }, [])
+
+  function applyUser(user: { user_metadata?: Record<string, string>; email?: string }) {
+    const name = user.user_metadata?.full_name || user.user_metadata?.name || ""
+    setGoogleUser({ name, email: user.email || "" })
+    setCliente((prev) => ({ ...prev, nombre: name }))
+  }
 
   async function loadAll() {
     const [{ data: prods }, { data: cfg }] = await Promise.all([
@@ -94,15 +109,6 @@ export default function MenuPublico() {
     setProductos(prods || [])
     if (cfg) setConfig({ ...config, ...cfg })
     setLoading(false)
-  }
-
-  async function checkGoogleUser() {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (user) {
-      const name = user.user_metadata?.full_name || user.user_metadata?.name || ""
-      setGoogleUser({ name, email: user.email || "" })
-      setCliente((prev) => ({ ...prev, nombre: name }))
-    }
   }
 
   async function loginConGoogle() {
