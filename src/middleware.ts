@@ -26,21 +26,43 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
 
   const pathname = request.nextUrl.pathname
+
+  // Rutas completamente públicas (no requieren auth)
   const isPublic =
     pathname.startsWith('/menu') ||
-    pathname === '/login' ||
-    pathname.startsWith('/auth')
+    pathname.startsWith('/auth') ||
+    pathname === '/login'
 
-  if (!user && !isPublic) {
+  // El usuario es admin si tiene role='admin' en app_metadata (solo Supabase puede escribir esto)
+  const isAdmin = user?.app_metadata?.role === 'admin'
+
+  // --- Lógica de acceso ---
+
+  // 1. Rutas públicas: dejar pasar siempre
+  if (isPublic) {
+    // Si ya está logueado y va a /login:
+    // - admin → redirigir al dashboard
+    // - cliente Google → redirigir a /menu
+    if (user && pathname === '/login') {
+      const url = request.nextUrl.clone()
+      url.pathname = isAdmin ? '/' : '/menu'
+      return NextResponse.redirect(url)
+    }
+    return supabaseResponse
+  }
+
+  // 2. Rutas admin (todo lo que no es público):
+  // Sin login → ir a /login
+  if (!user) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
   }
 
-  // Si ya esta logueado y va a /login, redirigir al dashboard
-  if (user && pathname === '/login') {
+  // Logueado pero no es admin → redirigir a /menu (cliente de Google)
+  if (!isAdmin) {
     const url = request.nextUrl.clone()
-    url.pathname = '/'
+    url.pathname = '/menu'
     return NextResponse.redirect(url)
   }
 
