@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useState, useCallback, useRef } from "react"
 import { supabase } from "@/lib/supabase"
 import StatCard from "@/components/StatCard"
 
@@ -44,6 +44,24 @@ export default function PedidosPage() {
   const [loading, setLoading] = useState(true)
   const [filtroEstado, setFiltroEstado] = useState("todos")
   const [procesando, setProcesando] = useState<Set<number>>(new Set())
+  const [nuevoPedidoAlerta, setNuevoPedidoAlerta] = useState(false)
+  const ultimoIdRef = useRef<number>(0)
+
+  function sonarAlerla() {
+    try {
+      const ctx = new AudioContext()
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      osc.frequency.setValueAtTime(880, ctx.currentTime)
+      osc.frequency.setValueAtTime(660, ctx.currentTime + 0.15)
+      gain.gain.setValueAtTime(0.4, ctx.currentTime)
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4)
+      osc.start(ctx.currentTime)
+      osc.stop(ctx.currentTime + 0.4)
+    } catch { /* ignorar si no soporta */ }
+  }
 
   const loadPedidos = useCallback(async () => {
     const { data } = await supabase
@@ -51,28 +69,30 @@ export default function PedidosPage() {
       .select("*")
       .order("id", { ascending: false })
       .limit(200)
-    setPedidos((data as Pedido[]) || [])
+    const lista = (data as Pedido[]) || []
+    if (ultimoIdRef.current > 0 && lista.length > 0 && lista[0].id > ultimoIdRef.current) {
+      sonarAlerla()
+      setNuevoPedidoAlerta(true)
+      setTimeout(() => setNuevoPedidoAlerta(false), 5000)
+    }
+    if (lista.length > 0) ultimoIdRef.current = lista[0].id
+    setPedidos(lista)
     setLoading(false)
   }, [])
 
   useEffect(() => {
     loadPedidos()
 
-    // Subscribe to real-time changes
     const channel = supabase
       .channel("pedidos-changes")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "pedidos" },
-        () => {
-          loadPedidos()
-        }
+        () => { loadPedidos() }
       )
       .subscribe()
 
-    return () => {
-      supabase.removeChannel(channel)
-    }
+    return () => { supabase.removeChannel(channel) }
   }, [loadPedidos])
 
   async function cambiarEstado(pedidoId: number, nuevoEstado: string) {
@@ -132,6 +152,12 @@ export default function PedidosPage() {
 
   return (
     <div className="space-y-4">
+      {nuevoPedidoAlerta && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-red-600 text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-bounce">
+          <span className="text-2xl">🔔</span>
+          <span className="font-bold text-lg">¡Nuevo pedido entrante!</span>
+        </div>
+      )}
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">Pedidos Online</h2>
         <div className="flex gap-2 items-center">
