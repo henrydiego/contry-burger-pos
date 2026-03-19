@@ -35,7 +35,7 @@ function getStepIndex(estado: string, pagoVerificado: boolean, esQr: boolean): n
 
 function SeguimientoContent() {
   const searchParams = useSearchParams()
-  const orderId = searchParams.get("order") ?? ""
+  const orderId = decodeURIComponent(searchParams.get("order") ?? "")
   const [pedido, setPedido] = useState<Pedido | null>(null)
   const [loading, setLoading] = useState(true)
   const [alerted, setAlerted] = useState(false)

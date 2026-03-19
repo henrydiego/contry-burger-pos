@@ -215,7 +215,7 @@ export default function MenuPublico() {
       })
       // Solo auto-redirigir si NO es pago QR (QR espera confirmación manual)
       if (cliente.metodo_pago !== "qr") {
-        setTimeout(() => router.push(`/menu/seguimiento?order=${data.order_id}`), 3500)
+        setTimeout(() => router.push(`/menu/seguimiento?order=${encodeURIComponent(data.order_id as string)}`), 3500)
       }
     } catch (err) {
       console.error(err); alert("Error de red: " + (err instanceof Error ? err.message : String(err))); setEnviando(false)
@@ -517,7 +517,7 @@ export default function MenuPublico() {
 
                     {/* Botón secundario: ir al seguimiento */}
                     <button
-                      onClick={() => router.push(`/menu/seguimiento?order=${pedidoConfirmado.orderId}`)}
+                      onClick={() => router.push(`/menu/seguimiento?order=${encodeURIComponent(pedidoConfirmado.orderId)}`)}
                       className="w-full bg-gray-800 hover:bg-gray-700 text-gray-300 py-3 rounded-2xl font-semibold text-sm transition-colors active:scale-95">
                       Ver estado del pedido →
                     </button>
