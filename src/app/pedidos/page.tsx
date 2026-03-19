@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useCallback, useRef } from "react"
+import { useEffect, useState, useRef } from "react"
 import { supabase } from "@/lib/supabase"
 import StatCard from "@/components/StatCard"
 
@@ -46,6 +46,7 @@ export default function PedidosPage() {
   const [procesando, setProcesando] = useState<Set<number>>(new Set())
   const [alertaTipo, setAlertaTipo] = useState<"normal" | "qr" | null>(null)
   const ultimoIdRef = useRef<number>(0)
+  const alertaTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   function sonarAlerta(esQr: boolean) {
     try {
@@ -79,54 +80,54 @@ export default function PedidosPage() {
     } catch { /* ignorar si no soporta */ }
   }
 
-  const loadPedidos = useCallback(async () => {
+  async function fetchPedidos() {
     const { data } = await supabase
       .from("pedidos")
       .select("*")
       .order("id", { ascending: false })
       .limit(200)
     const lista = (data as Pedido[]) || []
-    if (ultimoIdRef.current > 0 && lista.length > 0 && lista[0].id > ultimoIdRef.current) {
+    if (lista.length === 0) return
+    if (ultimoIdRef.current > 0 && lista[0].id > ultimoIdRef.current) {
       const esQr = lista[0].metodo_pago === "qr" && !lista[0].pago_verificado
       sonarAlerta(esQr)
       setAlertaTipo(esQr ? "qr" : "normal")
-      setTimeout(() => setAlertaTipo(null), 6000)
+      if (alertaTimerRef.current) clearTimeout(alertaTimerRef.current)
+      alertaTimerRef.current = setTimeout(() => setAlertaTipo(null), 6000)
     }
-    if (lista.length > 0) ultimoIdRef.current = lista[0].id
+    ultimoIdRef.current = lista[0].id
     setPedidos(lista)
     setLoading(false)
-  }, [])
+  }
 
   useEffect(() => {
-    loadPedidos()
+    fetchPedidos()
 
     // Realtime para actualizaciones instantáneas
     const channel = supabase
-      .channel("pedidos-changes")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "pedidos" },
-        () => { loadPedidos() }
-      )
+      .channel("pedidos-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "pedidos" }, fetchPedidos)
       .subscribe()
 
-    // Polling cada 3s como respaldo (por si realtime no dispara)
-    const interval = setInterval(() => { loadPedidos() }, 3000)
+    // Polling cada 3s como respaldo garantizado
+    const interval = setInterval(fetchPedidos, 3000)
 
     return () => {
       supabase.removeChannel(channel)
       clearInterval(interval)
+      if (alertaTimerRef.current) clearTimeout(alertaTimerRef.current)
     }
-  }, [loadPedidos])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   async function cambiarEstado(pedidoId: number, nuevoEstado: string) {
     await supabase.from("pedidos").update({ estado: nuevoEstado }).eq("id", pedidoId)
-    await loadPedidos()
+    await fetchPedidos()
   }
 
   async function verificarPago(pedidoId: number) {
     await supabase.from("pedidos").update({ pago_verificado: true }).eq("id", pedidoId)
-    loadPedidos()
+    await fetchPedidos()
   }
 
   // Procesa entrega via RPC atómica en PostgreSQL
@@ -147,7 +148,7 @@ export default function PedidosPage() {
         return
       }
 
-      loadPedidos()
+      fetchPedidos()
     } catch (err) {
       console.error(err)
       alert("Error al registrar la entrega")
