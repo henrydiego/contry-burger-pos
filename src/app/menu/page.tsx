@@ -50,7 +50,10 @@ export default function MenuPublico() {
   const [activeTab, setActiveTab] = useState<Tab>("menu")
   const [addedId, setAddedId] = useState<string | null>(null)
   const [isDesktop, setIsDesktop] = useState(false)
-  const [pedidoConfirmado, setPedidoConfirmado] = useState<{ orderId: string; whatsappPhone: string | null } | null>(null)
+  const [pedidoConfirmado, setPedidoConfirmado] = useState<{
+    orderId: string; whatsappPhone: string | null
+    metodoPago: string; totalPagado: number; nombreCliente: string
+  } | null>(null)
   const [config, setConfig] = useState<Config>({
     qr_pago_url: "", instrucciones_pago: "", hora_apertura: "00:00",
     hora_cierre: "23:59", abierto: true, tiempo_estimado: "30-45 min",
@@ -196,13 +199,26 @@ export default function MenuPublico() {
           tipo_entrega: cliente.tipo_entrega, numero_mesa: cliente.numero_mesa,
         }),
       })
-      const data = await res.json()
-      if (!data.ok) { alert(data.error || "Error al enviar el pedido."); setEnviando(false); return }
-      setPedidoConfirmado({ orderId: data.order_id, whatsappPhone: data.whatsapp_phone || null })
-      // pequeña pausa para mostrar el botón WhatsApp antes de redirigir
-      setTimeout(() => router.push(`/menu/seguimiento?order=${data.order_id}`), 3500)
+      let data: Record<string, unknown>
+      try { data = await res.json() } catch {
+        const text = await res.text().catch(() => "sin respuesta")
+        alert(`Error del servidor (${res.status}): ${text.slice(0, 300)}`)
+        setEnviando(false); return
+      }
+      if (!data.ok) { alert((data.error as string) || "Error al enviar el pedido."); setEnviando(false); return }
+      setPedidoConfirmado({
+        orderId: data.order_id as string,
+        whatsappPhone: (data.whatsapp_phone as string) || null,
+        metodoPago: cliente.metodo_pago,
+        totalPagado: total,
+        nombreCliente: cliente.nombre,
+      })
+      // Solo auto-redirigir si NO es pago QR (QR espera confirmación manual)
+      if (cliente.metodo_pago !== "qr") {
+        setTimeout(() => router.push(`/menu/seguimiento?order=${data.order_id}`), 3500)
+      }
     } catch (err) {
-      console.error(err); alert("Error de conexión. Intenta de nuevo."); setEnviando(false)
+      console.error(err); alert("Error de red: " + (err instanceof Error ? err.message : String(err))); setEnviando(false)
     }
   }
 
@@ -451,39 +467,81 @@ export default function MenuPublico() {
 
               {cliente.metodo_pago === "qr" && config.qr_pago_url && (
                 <div className="bg-yellow-950/40 border border-yellow-800/40 rounded-2xl p-4 text-center space-y-3">
-                  <p className="font-semibold text-yellow-300 text-sm">Escanea y paga antes de confirmar</p>
+                  <p className="font-semibold text-yellow-300 text-sm">📱 Escanea y paga antes de confirmar</p>
                   <img src={config.qr_pago_url} alt="QR Pago" className="w-44 h-44 object-contain rounded-xl border border-yellow-800/30 bg-white mx-auto" />
                   <a href={config.qr_pago_url} download className="text-sm text-blue-400 underline block">Descargar QR</a>
                   {config.instrucciones_pago && <p className="text-xs text-yellow-400">{config.instrucciones_pago}</p>}
-                  <p className="text-xl font-black text-yellow-300">Monto: ${total.toFixed(2)}</p>
-                  {config.whatsapp_phone && (
-                    <a href={`https://wa.me/${config.whatsapp_phone.replace(/\D/g, "")}?text=${encodeURIComponent(`Hola Contry Burger, ya realicé mi pago de $${total.toFixed(2)}. Mi nombre: ${cliente.nombre}. Teléfono: ${cliente.telefono}`)}`}
-                      target="_blank" rel="noopener noreferrer"
-                      className="flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-xl font-semibold text-sm transition-colors">
-                      <WhatsAppIcon className="w-4 h-4" /> Avisar que ya pagué
-                    </a>
-                  )}
+                  <p className="text-2xl font-black text-yellow-300">Monto: ${total.toFixed(2)}</p>
+                  <p className="text-xs text-yellow-500">Una vez pagado, presiona el botón de abajo ↓</p>
                 </div>
               )}
 
               {pedidoConfirmado ? (
-                <div className="bg-green-950/40 border border-green-800/50 rounded-2xl p-5 text-center space-y-3 animate-pop-in">
-                  <div className="text-4xl">✅</div>
-                  <p className="text-green-400 font-black text-lg">¡Pedido {pedidoConfirmado.orderId} confirmado!</p>
-                  <p className="text-gray-400 text-sm">Redirigiendo al seguimiento...</p>
-                  {pedidoConfirmado.whatsappPhone && (
-                    <a href={`https://wa.me/${pedidoConfirmado.whatsappPhone.replace(/\D/g, "")}?text=${encodeURIComponent(`Hola Contry Burger, soy el pedido ${pedidoConfirmado.orderId}. Mi nombre: ${cliente.nombre}. Monto: $${total.toFixed(2)}`)}`}
-                      target="_blank" rel="noopener noreferrer"
-                      className="flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 text-white py-3 rounded-xl font-bold transition-colors text-sm w-full">
-                      <WhatsAppIcon className="w-5 h-5" />
-                      Enviar confirmación por WhatsApp
-                    </a>
-                  )}
-                </div>
+                pedidoConfirmado.metodoPago === "qr" ? (
+                  /* ── Pantalla: Esperando verificación QR ── */
+                  <div className="space-y-4 animate-pop-in">
+                    {/* Estado */}
+                    <div className="bg-yellow-950/40 border border-yellow-700/50 rounded-2xl p-5 text-center space-y-2">
+                      <div className="text-5xl">⏳</div>
+                      <p className="text-yellow-300 font-black text-xl">Esperando verificación</p>
+                      <p className="text-yellow-400/80 text-sm">Tu pedido fue recibido. Avísanos por WhatsApp para confirmar tu pago rápidamente.</p>
+                      <div className="bg-yellow-900/30 border border-yellow-800/40 rounded-xl px-4 py-2 inline-block">
+                        <p className="text-yellow-200 font-black text-2xl">Pedido #{pedidoConfirmado.orderId}</p>
+                      </div>
+                    </div>
+
+                    {/* Resumen del pago */}
+                    <div className="bg-gray-900 rounded-2xl p-4 space-y-2 text-sm">
+                      <h3 className="font-semibold text-gray-300 text-xs uppercase tracking-wide mb-3">Resumen del pago</h3>
+                      <div className="flex justify-between"><span className="text-gray-500">Cliente</span><span className="text-white font-medium">{pedidoConfirmado.nombreCliente}</span></div>
+                      <div className="flex justify-between"><span className="text-gray-500">Método</span><span className="text-white font-medium">📱 QR / Transferencia</span></div>
+                      <div className="flex justify-between border-t border-gray-800 pt-2 mt-1"><span className="text-gray-400 font-semibold">Total pagado</span><span className="text-red-400 font-black text-lg">${pedidoConfirmado.totalPagado.toFixed(2)}</span></div>
+                    </div>
+
+                    {/* Botón principal WhatsApp */}
+                    {pedidoConfirmado.whatsappPhone ? (
+                      <a
+                        href={`https://wa.me/${pedidoConfirmado.whatsappPhone.replace(/\D/g, "")}?text=${encodeURIComponent(
+                          `💳 *PAGO REALIZADO*\n\nPedido #${pedidoConfirmado.orderId}\nCliente: ${pedidoConfirmado.nombreCliente}\nTotal: $${pedidoConfirmado.totalPagado.toFixed(2)}\n\nYa realicé el pago por QR, por favor verificar mi pedido 🙏`
+                        )}`}
+                        target="_blank" rel="noopener noreferrer"
+                        className="flex items-center justify-center gap-3 bg-green-600 hover:bg-green-500 active:scale-95 text-white py-4 rounded-2xl font-black text-base transition-all shadow-xl shadow-green-900/40 w-full">
+                        <WhatsAppIcon className="w-6 h-6" />
+                        Ya pagué · Confirmar por WhatsApp
+                      </a>
+                    ) : (
+                      <div className="bg-gray-900 border border-gray-700 rounded-2xl p-4 text-center">
+                        <p className="text-gray-400 text-sm">Muestra el pedido <span className="text-white font-black">#{pedidoConfirmado.orderId}</span> al cajero para confirmar tu pago.</p>
+                      </div>
+                    )}
+
+                    {/* Botón secundario: ir al seguimiento */}
+                    <button
+                      onClick={() => router.push(`/menu/seguimiento?order=${pedidoConfirmado.orderId}`)}
+                      className="w-full bg-gray-800 hover:bg-gray-700 text-gray-300 py-3 rounded-2xl font-semibold text-sm transition-colors active:scale-95">
+                      Ver estado del pedido →
+                    </button>
+                  </div>
+                ) : (
+                  /* ── Pantalla: Pedido confirmado (efectivo) ── */
+                  <div className="bg-green-950/40 border border-green-800/50 rounded-2xl p-5 text-center space-y-3 animate-pop-in">
+                    <div className="text-4xl">✅</div>
+                    <p className="text-green-400 font-black text-lg">¡Pedido {pedidoConfirmado.orderId} confirmado!</p>
+                    <p className="text-gray-400 text-sm">Redirigiendo al seguimiento...</p>
+                    {pedidoConfirmado.whatsappPhone && (
+                      <a href={`https://wa.me/${pedidoConfirmado.whatsappPhone.replace(/\D/g, "")}?text=${encodeURIComponent(`Hola Contry Burger, soy el pedido ${pedidoConfirmado.orderId}. Mi nombre: ${pedidoConfirmado.nombreCliente}. Monto: $${pedidoConfirmado.totalPagado.toFixed(2)}`)}`}
+                        target="_blank" rel="noopener noreferrer"
+                        className="flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 text-white py-3 rounded-xl font-bold transition-colors text-sm w-full">
+                        <WhatsAppIcon className="w-5 h-5" />
+                        Enviar confirmación por WhatsApp
+                      </a>
+                    )}
+                  </div>
+                )
               ) : (
                 <button onClick={enviarPedido} disabled={enviando}
                   className="w-full bg-red-600 hover:bg-red-700 text-white py-4 rounded-2xl font-black text-base transition-all active:scale-95 disabled:opacity-50 shadow-lg shadow-red-900/30">
-                  {enviando ? "Enviando pedido..." : cliente.metodo_pago === "qr" ? "✅ Ya transferí · Confirmar pedido" : "🍔 Confirmar Pedido"}
+                  {enviando ? "Enviando pedido..." : cliente.metodo_pago === "qr" ? "✅ Ya transferí · Enviar pedido" : "🍔 Confirmar Pedido"}
                 </button>
               )}
             </>
