@@ -176,7 +176,7 @@ export default function MenuPublico() {
 
   // Categorías ordenadas según config; las que no están en DB van al final
   const catNombresOrdenados = categoriasDB.map(c => c.nombre)
-  const catSinOrden = [...new Set(productos.map(p => p.categoria))].filter(c => !catNombresOrdenados.includes(c))
+  const catSinOrden = Array.from(new Set(productos.map(p => p.categoria))).filter(c => !catNombresOrdenados.includes(c))
   const categorias = ["Todos", ...catNombresOrdenados.filter(c => productos.some(p => p.categoria === c)), ...catSinOrden]
 
   // Icono: primero busca en DB, luego CAT_ICON hardcoded
