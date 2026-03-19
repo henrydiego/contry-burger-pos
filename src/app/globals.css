@@ -69,6 +69,15 @@ body {
   animation: pop-in 0.3s ease forwards;
 }
 
+/* Pulsing border for QR pending orders */
+@keyframes pulse-border {
+  0%, 100% { border-color: #fb923c; box-shadow: 0 0 0 2px rgba(251, 146, 60, 0.3); }
+  50% { border-color: #f97316; box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.5); }
+}
+.animate-pulse-border {
+  animation: pulse-border 1.8s ease-in-out infinite;
+}
+
 /* Hide scrollbar but keep scroll */
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-behavior: none; }

@@ -44,22 +44,38 @@ export default function PedidosPage() {
   const [loading, setLoading] = useState(true)
   const [filtroEstado, setFiltroEstado] = useState("todos")
   const [procesando, setProcesando] = useState<Set<number>>(new Set())
-  const [nuevoPedidoAlerta, setNuevoPedidoAlerta] = useState(false)
+  const [alertaTipo, setAlertaTipo] = useState<"normal" | "qr" | null>(null)
   const ultimoIdRef = useRef<number>(0)
 
-  function sonarAlerla() {
+  function sonarAlerta(esQr: boolean) {
     try {
       const ctx = new AudioContext()
-      const osc = ctx.createOscillator()
-      const gain = ctx.createGain()
-      osc.connect(gain)
-      gain.connect(ctx.destination)
-      osc.frequency.setValueAtTime(880, ctx.currentTime)
-      osc.frequency.setValueAtTime(660, ctx.currentTime + 0.15)
-      gain.gain.setValueAtTime(0.4, ctx.currentTime)
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4)
-      osc.start(ctx.currentTime)
-      osc.stop(ctx.currentTime + 0.4)
+      if (esQr) {
+        // 3 pitidos urgentes para QR
+        [0, 0.18, 0.36].forEach((t) => {
+          const osc = ctx.createOscillator()
+          const gain = ctx.createGain()
+          osc.connect(gain)
+          gain.connect(ctx.destination)
+          osc.frequency.setValueAtTime(1050, ctx.currentTime + t)
+          gain.gain.setValueAtTime(0.45, ctx.currentTime + t)
+          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.14)
+          osc.start(ctx.currentTime + t)
+          osc.stop(ctx.currentTime + t + 0.14)
+        })
+      } else {
+        // 2 pitidos normales
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+        osc.connect(gain)
+        gain.connect(ctx.destination)
+        osc.frequency.setValueAtTime(880, ctx.currentTime)
+        osc.frequency.setValueAtTime(660, ctx.currentTime + 0.15)
+        gain.gain.setValueAtTime(0.4, ctx.currentTime)
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4)
+        osc.start(ctx.currentTime)
+        osc.stop(ctx.currentTime + 0.4)
+      }
     } catch { /* ignorar si no soporta */ }
   }
 
@@ -71,9 +87,10 @@ export default function PedidosPage() {
       .limit(200)
     const lista = (data as Pedido[]) || []
     if (ultimoIdRef.current > 0 && lista.length > 0 && lista[0].id > ultimoIdRef.current) {
-      sonarAlerla()
-      setNuevoPedidoAlerta(true)
-      setTimeout(() => setNuevoPedidoAlerta(false), 5000)
+      const esQr = lista[0].metodo_pago === "qr" && !lista[0].pago_verificado
+      sonarAlerta(esQr)
+      setAlertaTipo(esQr ? "qr" : "normal")
+      setTimeout(() => setAlertaTipo(null), 6000)
     }
     if (lista.length > 0) ultimoIdRef.current = lista[0].id
     setPedidos(lista)
@@ -152,7 +169,16 @@ export default function PedidosPage() {
 
   return (
     <div className="space-y-4">
-      {nuevoPedidoAlerta && (
+      {alertaTipo === "qr" && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-orange-500 text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-bounce">
+          <span className="text-2xl">💳</span>
+          <div>
+            <p className="font-black text-base leading-none">¡Pedido QR! Verificar pago</p>
+            <p className="text-orange-100 text-xs mt-0.5">El cliente ya transfirió — confirma el pago</p>
+          </div>
+        </div>
+      )}
+      {alertaTipo === "normal" && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-red-600 text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-bounce">
           <span className="text-2xl">🔔</span>
           <span className="font-bold text-lg">¡Nuevo pedido entrante!</span>
@@ -191,10 +217,11 @@ export default function PedidosPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {pedidosFiltrados.map((pedido) => {
             const estadoInfo = ESTADOS.find((e) => e.value === pedido.estado) || ESTADOS[0]
+            const esQrPendiente = pedido.metodo_pago === "qr" && !pedido.pago_verificado && pedido.estado !== "cancelado"
             return (
-              <div key={pedido.id} className="bg-white rounded-lg shadow border overflow-hidden">
+              <div key={pedido.id} className={`bg-white rounded-lg shadow overflow-hidden ${esQrPendiente ? "border-2 border-orange-400 ring-2 ring-orange-300/50 animate-pulse-border" : "border"}`}>
                 {/* Header */}
-                <div className="bg-gray-800 text-white p-3 flex items-center justify-between">
+                <div className={`text-white p-3 flex items-center justify-between ${esQrPendiente ? "bg-orange-600" : "bg-gray-800"}`}>
                   <div>
                     <p className="font-bold">{pedido.order_id}</p>
                     <p className="text-xs text-gray-400">{pedido.fecha} {pedido.hora}</p>
@@ -237,11 +264,11 @@ export default function PedidosPage() {
                     <div className="mt-2">
                       {pedido.pago_verificado ? (
                         <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 text-xs font-semibold px-2 py-1 rounded-full">
-                          ✅ Pago verificado
+                          ✅ Pago QR verificado
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 bg-red-100 text-red-700 text-xs font-semibold px-2 py-1 rounded-full">
-                          ⚠️ Pago sin verificar
+                        <span className="inline-flex items-center gap-1.5 bg-orange-100 text-orange-700 text-xs font-bold px-3 py-1.5 rounded-full border border-orange-300">
+                          💳 Pago QR — pendiente verificación
                         </span>
                       )}
                     </div>
@@ -266,12 +293,12 @@ export default function PedidosPage() {
                 {/* Actions */}
                 <div className="p-3 border-t bg-gray-50 flex gap-2 flex-wrap">
                   {/* Verificar pago QR */}
-                  {pedido.metodo_pago === "qr" && !pedido.pago_verificado && pedido.estado === "pendiente" && (
+                  {pedido.metodo_pago === "qr" && !pedido.pago_verificado && pedido.estado !== "cancelado" && (
                     <button
                       onClick={() => verificarPago(pedido.id)}
-                      className="w-full bg-yellow-500 text-white py-2 rounded text-sm font-semibold hover:bg-yellow-600 mb-1"
+                      className="w-full bg-orange-500 hover:bg-orange-600 text-white py-2.5 rounded-lg text-sm font-bold mb-1 flex items-center justify-center gap-2 shadow-md shadow-orange-200"
                     >
-                      💰 Confirmar Pago Yape
+                      💳 Confirmar Pago QR
                     </button>
                   )}
                   {pedido.estado === "pendiente" && (
