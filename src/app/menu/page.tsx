@@ -23,7 +23,7 @@ interface Config {
   redes_sociales: RedSocial[]; direccion_local: string
 }
 interface CategoriaDB {
-  nombre: string; icono: string; orden: number; activo: boolean
+  nombre: string; icono: string; orden: number; activo: boolean; es_extra: boolean
 }
 type Step = "menu" | "datos" | "confirmacion"
 type Tab = "inicio" | "menu" | "perfil"
@@ -83,6 +83,7 @@ export default function MenuPublico() {
   const [step, setStep] = useState<Step>("menu")
   const [enviando, setEnviando] = useState(false)
   const [carritoOpen, setCarritoOpen] = useState(false) // mobile bottom sheet
+  const [carritoTab, setCarritoTab] = useState<"pedido" | "extras">("pedido")
   const [activeTab, setActiveTab] = useState<Tab>("menu")
   const [addedId, setAddedId] = useState<string | null>(null)
   const [isDesktop, setIsDesktop] = useState(false)
@@ -158,7 +159,7 @@ export default function MenuPublico() {
     const [{ data: prods }, { data: cfg }, { data: cats }] = await Promise.all([
       supabase.from("productos").select("*").eq("activo", true),
       supabase.from("configuracion").select("*").eq("id", 1).single(),
-      supabase.from("categorias").select("nombre,icono,orden,activo").eq("activo", true).order("orden"),
+      supabase.from("categorias").select("nombre,icono,orden,activo,es_extra").eq("activo", true).order("orden"),
     ])
     setProductos(prods || [])
     if (cfg) setConfig(prev => ({ ...prev, ...cfg }))
@@ -228,6 +229,10 @@ export default function MenuPublico() {
   }
 
   const productosFiltrados = categoriaFiltro === "Todos" ? productos : productos.filter(p => p.categoria === categoriaFiltro)
+
+  // Productos extras: categorías marcadas como es_extra
+  const categoriasExtra = categoriasDB.filter(c => c.es_extra).map(c => c.nombre)
+  const productosExtra = productos.filter(p => categoriasExtra.includes(p.categoria) && !p.agotado)
 
   function agregarAlCarrito(producto: Producto) {
     if (producto.agotado) return
@@ -1159,58 +1164,151 @@ export default function MenuPublico() {
       {carritoOpen && (
         <div className="fixed inset-0 z-50 flex flex-col justify-end">
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm animate-fade-in" onClick={() => setCarritoOpen(false)} />
-          <div className="relative bg-gray-900 rounded-t-3xl max-h-[85vh] flex flex-col shadow-2xl animate-slide-up border-t border-gray-700/50">
-            <div className="flex justify-center pt-3 pb-2 shrink-0">
+          <div className="relative bg-gray-900 rounded-t-3xl max-h-[88vh] flex flex-col shadow-2xl animate-slide-up border-t border-gray-700/50">
+            {/* Handle */}
+            <div className="flex justify-center pt-3 pb-1 shrink-0">
               <div className="w-10 h-1 bg-gray-700 rounded-full" />
             </div>
-            <div className="px-5 pb-3 flex items-center justify-between shrink-0">
+            {/* Header */}
+            <div className="px-5 pb-2 flex items-center justify-between shrink-0">
               <h2 className="text-white font-black text-lg">Tu carrito</h2>
               <button onClick={() => setCarritoOpen(false)}
                 className="w-8 h-8 bg-gray-800 rounded-full flex items-center justify-center text-gray-400 hover:text-white transition-colors text-xl leading-none">×</button>
             </div>
-            <div className="overflow-y-auto flex-1 px-5 space-y-2 pb-3">
-              {carrito.length === 0 ? (
-                <div className="text-center py-12">
-                  <p className="text-5xl mb-3">🛒</p>
-                  <p className="text-gray-400 mb-4">Tu carrito está vacío</p>
-                  <button onClick={() => { setCarritoOpen(false); setActiveTab("menu") }}
-                    className="bg-red-600 text-white px-6 py-2.5 rounded-xl font-bold text-sm hover:bg-red-700 transition-colors">
-                    Explorar menú
-                  </button>
-                </div>
-              ) : (
-                carrito.map(item => (
-                  <div key={item.producto_id} className="flex items-center gap-3 bg-gray-800 rounded-2xl p-3">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-white font-semibold text-sm truncate">{item.nombre}</p>
-                      <p className="text-red-400 font-bold text-sm">${item.subtotal.toFixed(2)}</p>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <button onClick={() => cambiarCantidad(item.producto_id, -1)}
-                        className="w-8 h-8 bg-gray-700 hover:bg-gray-600 rounded-xl font-bold text-white flex items-center justify-center transition-colors text-base">−</button>
-                      <span className="text-white font-black text-sm w-5 text-center">{item.cantidad}</span>
-                      <button onClick={() => cambiarCantidad(item.producto_id, 1)}
-                        className="w-8 h-8 bg-red-600 hover:bg-red-700 rounded-xl font-bold text-white flex items-center justify-center transition-colors text-base">+</button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-            {carrito.length > 0 && (
-              <div className="px-5 pb-6 pt-3 border-t border-gray-800 space-y-3 shrink-0 safe-area-pb">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-400 text-sm">{totalItems} artículo{totalItems !== 1 ? "s" : ""}</span>
-                  <span className="text-white font-black text-2xl">${subtotalProductos.toFixed(2)}</span>
-                </div>
-                {config.pedido_minimo > 0 && subtotalProductos < config.pedido_minimo && (
-                  <p className="text-yellow-400 text-xs text-center">Mínimo: ${config.pedido_minimo.toFixed(2)} · Falta ${(config.pedido_minimo - subtotalProductos).toFixed(2)}</p>
-                )}
-                <button onClick={() => { setCarritoOpen(false); setStep("datos") }}
-                  disabled={config.pedido_minimo > 0 && subtotalProductos < config.pedido_minimo}
-                  className="w-full bg-red-600 hover:bg-red-700 text-white py-4 rounded-2xl font-black text-base transition-all active:scale-95 disabled:opacity-40 shadow-lg shadow-red-900/30">
-                  Hacer pedido · ${subtotalProductos.toFixed(2)}
+
+            {/* Tabs */}
+            <div className="px-5 pb-2 shrink-0">
+              <div className="flex bg-gray-800 rounded-xl p-1 gap-1">
+                <button onClick={() => setCarritoTab("pedido")}
+                  className={`flex-1 py-2 rounded-lg text-sm font-bold transition-colors ${carritoTab === "pedido" ? "bg-gray-700 text-white" : "text-gray-400 hover:text-gray-200"}`}>
+                  🛒 Mi pedido {totalItems > 0 && <span className="ml-1 bg-red-600 text-white text-xs px-1.5 py-0.5 rounded-full">{totalItems}</span>}
+                </button>
+                <button onClick={() => setCarritoTab("extras")}
+                  className={`flex-1 py-2 rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-1.5 ${carritoTab === "extras" ? "bg-purple-700 text-white" : "text-gray-400 hover:text-gray-200"}`}>
+                  ✨ Extras {productosExtra.length > 0 && carritoTab !== "extras" && <span className="w-2 h-2 bg-purple-400 rounded-full animate-pulse" />}
                 </button>
               </div>
+            </div>
+
+            {/* Contenido tab Mi pedido */}
+            {carritoTab === "pedido" && (
+              <>
+                <div className="overflow-y-auto flex-1 px-5 space-y-2 pb-3">
+                  {carrito.length === 0 ? (
+                    <div className="text-center py-10">
+                      <p className="text-5xl mb-3">🛒</p>
+                      <p className="text-gray-400 mb-4">Tu carrito está vacío</p>
+                      <button onClick={() => { setCarritoOpen(false); setActiveTab("menu") }}
+                        className="bg-red-600 text-white px-6 py-2.5 rounded-xl font-bold text-sm hover:bg-red-700">
+                        Explorar menú
+                      </button>
+                    </div>
+                  ) : (
+                    carrito.map(item => (
+                      <div key={item.producto_id} className="flex items-center gap-3 bg-gray-800 rounded-2xl p-3">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-white font-semibold text-sm truncate">{item.nombre}</p>
+                          <p className="text-red-400 font-bold text-sm">${item.subtotal.toFixed(2)}</p>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button onClick={() => cambiarCantidad(item.producto_id, -1)}
+                            className="w-8 h-8 bg-gray-700 hover:bg-gray-600 rounded-xl font-bold text-white flex items-center justify-center text-base">−</button>
+                          <span className="text-white font-black text-sm w-5 text-center">{item.cantidad}</span>
+                          <button onClick={() => cambiarCantidad(item.producto_id, 1)}
+                            className="w-8 h-8 bg-red-600 hover:bg-red-700 rounded-xl font-bold text-white flex items-center justify-center text-base">+</button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+                {carrito.length > 0 && (
+                  <div className="px-5 pb-6 pt-3 border-t border-gray-800 space-y-3 shrink-0 safe-area-pb">
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-400 text-sm">{totalItems} artículo{totalItems !== 1 ? "s" : ""}</span>
+                      <span className="text-white font-black text-2xl">${subtotalProductos.toFixed(2)}</span>
+                    </div>
+                    {config.pedido_minimo > 0 && subtotalProductos < config.pedido_minimo && (
+                      <p className="text-yellow-400 text-xs text-center">Mínimo: ${config.pedido_minimo.toFixed(2)} · Falta ${(config.pedido_minimo - subtotalProductos).toFixed(2)}</p>
+                    )}
+                    <button onClick={() => { setCarritoOpen(false); setStep("datos") }}
+                      disabled={config.pedido_minimo > 0 && subtotalProductos < config.pedido_minimo}
+                      className="w-full bg-red-600 hover:bg-red-700 text-white py-4 rounded-2xl font-black text-base transition-all active:scale-95 disabled:opacity-40 shadow-lg shadow-red-900/30">
+                      Hacer pedido · ${subtotalProductos.toFixed(2)}
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Contenido tab Extras */}
+            {carritoTab === "extras" && (
+              <>
+                <div className="overflow-y-auto flex-1 px-4 pb-3">
+                  {productosExtra.length === 0 ? (
+                    <div className="text-center py-12">
+                      <p className="text-4xl mb-3">✨</p>
+                      <p className="text-gray-400 text-sm">No hay extras configurados</p>
+                      <p className="text-gray-600 text-xs mt-1">El admin puede marcar categorías como "Extra" en Configuración</p>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Agrupar por categoría */}
+                      {categoriasExtra.map(cat => {
+                        const prods = productosExtra.filter(p => p.categoria === cat)
+                        if (prods.length === 0) return null
+                        return (
+                          <div key={cat} className="mb-4">
+                            <p className="text-gray-400 text-xs font-bold uppercase tracking-wide mb-2 mt-3">
+                              {getCatIcon(cat)} {cat}
+                            </p>
+                            <div className="grid grid-cols-2 gap-2">
+                              {prods.map(prod => {
+                                const enCarrito = carrito.find(c => c.producto_id === prod.id)
+                                return (
+                                  <div key={prod.id} className="bg-gray-800 rounded-2xl p-3 flex flex-col">
+                                    {prod.imagen_url ? (
+                                      <img src={prod.imagen_url} alt={prod.nombre} className="w-full h-20 object-cover rounded-xl mb-2" />
+                                    ) : (
+                                      <div className="w-full h-16 bg-gray-700 rounded-xl mb-2 flex items-center justify-center text-3xl">
+                                        {getCatIcon(prod.categoria)}
+                                      </div>
+                                    )}
+                                    <p className="text-white text-xs font-semibold leading-tight line-clamp-2 flex-1">{prod.nombre}</p>
+                                    <p className="text-red-400 font-black text-sm mt-1 mb-2">${prod.precio_venta.toFixed(2)}</p>
+                                    {enCarrito ? (
+                                      <div className="flex items-center justify-between bg-gray-700 rounded-xl p-1">
+                                        <button onClick={() => cambiarCantidad(prod.id, -1)}
+                                          className="w-7 h-7 bg-gray-600 rounded-lg font-bold text-white flex items-center justify-center text-sm">−</button>
+                                        <span className="text-white font-black text-sm">{enCarrito.cantidad}</span>
+                                        <button onClick={() => cambiarCantidad(prod.id, 1)}
+                                          className="w-7 h-7 bg-red-600 rounded-lg font-bold text-white flex items-center justify-center text-sm">+</button>
+                                      </div>
+                                    ) : (
+                                      <button onClick={() => agregarAlCarrito(prod)}
+                                        className="w-full bg-purple-600 hover:bg-purple-700 text-white py-1.5 rounded-xl text-xs font-bold transition-colors active:scale-95">
+                                        + Agregar
+                                      </button>
+                                    )}
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </>
+                  )}
+                </div>
+                {carrito.length > 0 && (
+                  <div className="px-5 pb-6 pt-3 border-t border-gray-800 shrink-0 safe-area-pb">
+                    <button onClick={() => { setCarritoOpen(false); setStep("datos") }}
+                      disabled={config.pedido_minimo > 0 && subtotalProductos < config.pedido_minimo}
+                      className="w-full bg-red-600 hover:bg-red-700 text-white py-4 rounded-2xl font-black text-base transition-all active:scale-95 disabled:opacity-40 shadow-lg shadow-red-900/30">
+                      Hacer pedido · ${subtotalProductos.toFixed(2)}
+                    </button>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>

@@ -26,6 +26,7 @@ interface Categoria {
   icono: string
   orden: number
   activo: boolean
+  es_extra: boolean
 }
 
 interface Cupon {
@@ -111,6 +112,11 @@ export default function ConfigPage() {
 
   async function toggleCategoria(id: number, activo: boolean) {
     await supabase.from("categorias").update({ activo: !activo }).eq("id", id)
+    loadCategorias()
+  }
+
+  async function toggleExtra(id: number, es_extra: boolean) {
+    await supabase.from("categorias").update({ es_extra: !es_extra }).eq("id", id)
     loadCategorias()
   }
 
@@ -489,54 +495,53 @@ export default function ConfigPage() {
               <p className="text-sm text-gray-500 mt-1">Usa las flechas ↑↓ para cambiar el orden. El cliente verá las categorías en este orden.</p>
             </div>
 
+            {/* Leyenda */}
+            <div className="flex gap-4 text-xs text-gray-400 px-1">
+              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-green-400 inline-block"></span> Visible en menú</span>
+              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-purple-400 inline-block"></span> Aparece como Extra en carrito</span>
+            </div>
+
             {/* Lista ordenable */}
             <div className="divide-y border rounded-xl overflow-hidden">
               {categorias.map((cat, idx) => (
-                <div key={cat.id} className={`flex items-center gap-3 px-4 py-3 bg-white hover:bg-gray-50 transition-colors ${!cat.activo ? "opacity-50" : ""}`}>
+                <div key={cat.id} className={`flex items-center gap-2 px-3 py-3 bg-white hover:bg-gray-50 transition-colors ${!cat.activo ? "opacity-50" : ""}`}>
                   {/* Número de orden */}
-                  <span className="w-7 h-7 rounded-full bg-gray-100 text-gray-500 text-xs font-black flex items-center justify-center shrink-0">
+                  <span className="w-6 h-6 rounded-full bg-gray-100 text-gray-500 text-xs font-black flex items-center justify-center shrink-0">
                     {idx + 1}
                   </span>
 
                   {/* Icono editable */}
-                  <input
-                    type="text"
-                    value={cat.icono}
+                  <input type="text" value={cat.icono}
                     onChange={e => actualizarIcono(cat.id, e.target.value)}
-                    className="w-10 text-center text-xl border rounded-lg py-1 focus:outline-none focus:border-red-400"
-                    maxLength={4}
-                  />
+                    className="w-9 text-center text-lg border rounded-lg py-1 focus:outline-none focus:border-red-400"
+                    maxLength={4} />
 
                   {/* Nombre */}
                   <span className="flex-1 font-semibold text-gray-800 text-sm">{cat.nombre}</span>
 
-                  {/* Toggle visible */}
+                  {/* Toggle visible en menú */}
                   <button onClick={() => toggleCategoria(cat.id, cat.activo)}
-                    className={`text-xs font-semibold px-2 py-1 rounded-full ${cat.activo ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
-                    {cat.activo ? "Visible" : "Oculta"}
+                    className={`text-xs font-semibold px-2 py-1 rounded-full shrink-0 ${cat.activo ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
+                    {cat.activo ? "✅ Menú" : "🚫 Oculta"}
+                  </button>
+
+                  {/* Toggle extras */}
+                  <button onClick={() => toggleExtra(cat.id, cat.es_extra)}
+                    className={`text-xs font-semibold px-2 py-1 rounded-full shrink-0 ${cat.es_extra ? "bg-purple-100 text-purple-700 border border-purple-200" : "bg-gray-50 text-gray-400 border border-gray-200"}`}>
+                    {cat.es_extra ? "✨ Extra" : "+ Extra"}
                   </button>
 
                   {/* Flechas */}
                   <div className="flex flex-col gap-0.5 shrink-0">
-                    <button
-                      onClick={() => moverCategoria(cat.id, "arriba")}
-                      disabled={idx === 0}
-                      className="w-7 h-6 bg-gray-100 hover:bg-gray-200 rounded text-gray-600 disabled:opacity-20 flex items-center justify-center text-xs font-bold transition-colors">
-                      ↑
-                    </button>
-                    <button
-                      onClick={() => moverCategoria(cat.id, "abajo")}
-                      disabled={idx === categorias.length - 1}
-                      className="w-7 h-6 bg-gray-100 hover:bg-gray-200 rounded text-gray-600 disabled:opacity-20 flex items-center justify-center text-xs font-bold transition-colors">
-                      ↓
-                    </button>
+                    <button onClick={() => moverCategoria(cat.id, "arriba")} disabled={idx === 0}
+                      className="w-6 h-5 bg-gray-100 hover:bg-gray-200 rounded text-gray-600 disabled:opacity-20 flex items-center justify-center text-xs font-bold">↑</button>
+                    <button onClick={() => moverCategoria(cat.id, "abajo")} disabled={idx === categorias.length - 1}
+                      className="w-6 h-5 bg-gray-100 hover:bg-gray-200 rounded text-gray-600 disabled:opacity-20 flex items-center justify-center text-xs font-bold">↓</button>
                   </div>
 
                   {/* Eliminar */}
                   <button onClick={() => eliminarCategoria(cat.id, cat.nombre)}
-                    className="text-gray-300 hover:text-red-500 transition-colors text-sm shrink-0">
-                    ✕
-                  </button>
+                    className="text-gray-300 hover:text-red-500 transition-colors text-sm shrink-0">✕</button>
                 </div>
               ))}
             </div>
