@@ -31,7 +31,8 @@ export async function middleware(request: NextRequest) {
   const isPublic =
     pathname.startsWith('/auth') ||
     pathname === '/login' ||
-    pathname.startsWith('/menu') // menú y checkout son públicos, login es opcional
+    pathname.startsWith('/menu') || // menú y checkout son públicos, login es opcional
+    pathname.startsWith('/api/') // las APIs manejan su propia auth
 
   const isMenuRoute = pathname.startsWith('/menu')
   const isAdmin = user?.app_metadata?.role === 'admin'
