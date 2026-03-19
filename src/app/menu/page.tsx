@@ -1248,7 +1248,7 @@ export default function MenuPublico() {
                     <div className="text-center py-12">
                       <p className="text-4xl mb-3">✨</p>
                       <p className="text-gray-400 text-sm">No hay extras configurados</p>
-                      <p className="text-gray-600 text-xs mt-1">El admin puede marcar categorías como "Extra" en Configuración</p>
+                      <p className="text-gray-600 text-xs mt-1">El admin puede marcar categorías como Extra en Configuración</p>
                     </div>
                   ) : (
                     <>
