@@ -3,6 +3,8 @@
 import { useEffect, useState, useRef } from "react"
 import { supabase } from "@/lib/supabase"
 
+interface RedSocial { plataforma: string; url: string }
+
 interface Config {
   qr_pago_url: string
   instrucciones_pago: string
@@ -14,6 +16,8 @@ interface Config {
   pedido_minimo: number
   mensaje_bienvenida: string
   whatsapp_phone: string
+  redes_sociales: RedSocial[]
+  direccion_local: string
 }
 
 interface Categoria {
@@ -46,14 +50,25 @@ const DEFAULT: Config = {
   pedido_minimo: 0,
   mensaje_bienvenida: "¡Bienvenido! Haz tu pedido y te lo llevamos.",
   whatsapp_phone: "",
+  redes_sociales: [],
+  direccion_local: "",
 }
+
+const PLATAFORMAS = [
+  { id: "instagram", label: "Instagram", color: "#E1306C" },
+  { id: "tiktok", label: "TikTok", color: "#000000" },
+  { id: "facebook", label: "Facebook", color: "#1877F2" },
+  { id: "twitter", label: "Twitter / X", color: "#000000" },
+  { id: "youtube", label: "YouTube", color: "#FF0000" },
+]
 
 export default function ConfigPage() {
   const [cfg, setCfg] = useState<Config>(DEFAULT)
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [msg, setMsg] = useState("")
-  const [tab, setTab] = useState<"tienda" | "delivery" | "whatsapp" | "cupones" | "categorias">("tienda")
+  const [tab, setTab] = useState<"tienda" | "delivery" | "whatsapp" | "cupones" | "categorias" | "redes">("tienda")
+  const [nuevaRed, setNuevaRed] = useState({ plataforma: "instagram", url: "" })
   const fileRef = useRef<HTMLInputElement>(null)
 
   // Cupones
@@ -184,10 +199,22 @@ export default function ConfigPage() {
     loadCupones()
   }
 
+  function agregarRed() {
+    if (!nuevaRed.url.trim()) return
+    const redes = [...(cfg.redes_sociales || []), { plataforma: nuevaRed.plataforma, url: nuevaRed.url.trim() }]
+    setCfg(c => ({ ...c, redes_sociales: redes }))
+    setNuevaRed(r => ({ ...r, url: "" }))
+  }
+
+  function eliminarRed(idx: number) {
+    setCfg(c => ({ ...c, redes_sociales: c.redes_sociales.filter((_, i) => i !== idx) }))
+  }
+
   const TABS = [
     { key: "tienda", label: "Tienda & QR" },
     { key: "delivery", label: "Delivery" },
     { key: "whatsapp", label: "WhatsApp" },
+    { key: "redes", label: "🌐 Redes & Info" },
     { key: "categorias", label: "📂 Categorías" },
     { key: "cupones", label: "Cupones" },
   ] as const
@@ -198,7 +225,7 @@ export default function ConfigPage() {
         <h2 className="text-2xl font-bold">Configuración</h2>
         <button
           onClick={save}
-          disabled={saving || tab === "cupones"}
+          disabled={saving || tab === "cupones" || tab === "categorias"}
           className="bg-red-600 text-white px-5 py-2 rounded-lg font-semibold hover:bg-red-700 disabled:opacity-50 text-sm"
         >
           {saving ? "Guardando..." : "Guardar"}
@@ -380,6 +407,76 @@ export default function ConfigPage() {
           <button onClick={save} disabled={saving} className="w-full bg-green-600 text-white py-2.5 rounded-lg font-bold hover:bg-green-700 disabled:opacity-50">
             {saving ? "Guardando..." : "Guardar número WhatsApp"}
           </button>
+        </div>
+      )}
+
+      {/* TAB: Redes & Info */}
+      {tab === "redes" && (
+        <div className="space-y-4">
+          {/* Dirección */}
+          <div className="bg-white rounded-xl border shadow p-5 space-y-3">
+            <h3 className="font-semibold text-gray-800">📍 Dirección del local</h3>
+            <p className="text-sm text-gray-500">Aparece en el pie del menú del cliente para que sepa dónde estás.</p>
+            <textarea
+              rows={2}
+              placeholder="ej: Calle 4 Piso 8, Edificio Central, Ciudad"
+              value={cfg.direccion_local}
+              onChange={e => setCfg(c => ({ ...c, direccion_local: e.target.value }))}
+              className="w-full border rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none focus:border-red-400"
+            />
+            <button onClick={save} disabled={saving}
+              className="bg-red-600 text-white px-5 py-2 rounded-lg text-sm font-semibold hover:bg-red-700 disabled:opacity-50">
+              {saving ? "Guardando..." : "Guardar dirección"}
+            </button>
+          </div>
+
+          {/* Redes sociales */}
+          <div className="bg-white rounded-xl border shadow p-5 space-y-4">
+            <h3 className="font-semibold text-gray-800">📱 Redes Sociales</h3>
+            <p className="text-sm text-gray-500">Aparecen como íconos en el pie del menú del cliente.</p>
+
+            {/* Lista de redes */}
+            {(cfg.redes_sociales || []).length === 0 ? (
+              <p className="text-sm text-gray-400 text-center py-3">No hay redes configuradas aún</p>
+            ) : (
+              <div className="space-y-2">
+                {(cfg.redes_sociales || []).map((red, idx) => {
+                  const plat = PLATAFORMAS.find(p => p.id === red.plataforma)
+                  return (
+                    <div key={idx} className="flex items-center gap-3 bg-gray-50 rounded-xl px-3 py-2.5 border">
+                      <span className="text-sm font-bold" style={{ color: plat?.color }}>{plat?.label ?? red.plataforma}</span>
+                      <span className="flex-1 text-xs text-gray-500 truncate">{red.url}</span>
+                      <button onClick={() => eliminarRed(idx)} className="text-gray-300 hover:text-red-500 transition-colors text-sm">✕</button>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            {/* Agregar nueva red */}
+            <div className="border-t pt-3 space-y-2">
+              <p className="text-xs text-gray-500 font-semibold">Agregar red social</p>
+              <div className="flex gap-2">
+                <select value={nuevaRed.plataforma} onChange={e => setNuevaRed(r => ({ ...r, plataforma: e.target.value }))}
+                  className="border rounded-lg px-3 py-2 text-sm bg-white shrink-0">
+                  {PLATAFORMAS.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
+                </select>
+                <input type="url" placeholder="https://..." value={nuevaRed.url}
+                  onChange={e => setNuevaRed(r => ({ ...r, url: e.target.value }))}
+                  onKeyDown={e => { if (e.key === "Enter") agregarRed() }}
+                  className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-red-400" />
+                <button onClick={agregarRed} disabled={!nuevaRed.url.trim()}
+                  className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-red-700 disabled:opacity-50 shrink-0">
+                  + Agregar
+                </button>
+              </div>
+            </div>
+
+            <button onClick={save} disabled={saving}
+              className="w-full bg-red-600 text-white py-2.5 rounded-lg text-sm font-bold hover:bg-red-700 disabled:opacity-50">
+              {saving ? "Guardando..." : "Guardar redes sociales"}
+            </button>
+          </div>
         </div>
       )}
 
