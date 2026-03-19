@@ -68,7 +68,7 @@ export default function ConfigPage() {
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [msg, setMsg] = useState("")
-  const [tab, setTab] = useState<"tienda" | "delivery" | "whatsapp" | "cupones" | "categorias" | "redes">("tienda")
+  const [tab, setTab] = useState<"tienda" | "delivery" | "whatsapp" | "cupones" | "categorias" | "redes" | "reiniciar">("tienda")
   const [nuevaRed, setNuevaRed] = useState({ plataforma: "instagram", url: "" })
   const fileRef = useRef<HTMLInputElement>(null)
 
@@ -81,6 +81,12 @@ export default function ConfigPage() {
   const [categorias, setCategorias] = useState<Categoria[]>([])
   const [nuevaCat, setNuevaCat] = useState({ nombre: "", icono: "🍽️" })
   const [savingCat, setSavingCat] = useState(false)
+
+  // Reinicio del sistema
+  const [resetInput, setResetInput] = useState("")
+  const [resetting, setResetting] = useState(false)
+  const [resetMsg, setResetMsg] = useState("")
+  const [resetPhase, setResetPhase] = useState("")
 
   useEffect(() => {
     loadConfig()
@@ -205,6 +211,38 @@ export default function ConfigPage() {
     loadCupones()
   }
 
+  async function resetearSistema() {
+    if (resetInput !== "BORRAR TODO") return
+    if (!confirm("ULTIMA ADVERTENCIA: Se eliminaran todos los pedidos, ventas, caja, compras, inventario, productos y recetas. Esta accion NO se puede deshacer. ¿Continuar?")) return
+    setResetting(true)
+    setResetMsg("")
+    const tablas = [
+      "merma",
+      "ventas",
+      "caja_diaria",
+      "gastos",
+      "pedidos",
+      "compras",
+      "recetas",
+      "productos",
+      "inventario",
+    ]
+    const errores: string[] = []
+    for (const tabla of tablas) {
+      setResetPhase(`Borrando ${tabla}...`)
+      const { error } = await supabase.from(tabla).delete().gte("id", 0)
+      if (error) errores.push(`${tabla}: ${error.message}`)
+    }
+    setResetting(false)
+    setResetPhase("")
+    setResetInput("")
+    if (errores.length > 0) {
+      setResetMsg("Algunos errores: " + errores.join(" | "))
+    } else {
+      setResetMsg("✅ Sistema reiniciado. Ya puedes ingresar datos reales.")
+    }
+  }
+
   function agregarRed() {
     if (!nuevaRed.url.trim()) return
     const redes = [...(cfg.redes_sociales || []), { plataforma: nuevaRed.plataforma, url: nuevaRed.url.trim() }]
@@ -221,8 +259,9 @@ export default function ConfigPage() {
     { key: "delivery", label: "Delivery" },
     { key: "whatsapp", label: "WhatsApp" },
     { key: "redes", label: "🌐 Redes & Info" },
-    { key: "categorias", label: "📂 Categorías" },
+    { key: "categorias", label: "📂 Categorias" },
     { key: "cupones", label: "Cupones" },
+    { key: "reiniciar", label: "⚠️ Reiniciar" },
   ] as const
 
   return (
@@ -231,7 +270,7 @@ export default function ConfigPage() {
         <h2 className="text-2xl font-bold">Configuración</h2>
         <button
           onClick={save}
-          disabled={saving || tab === "cupones" || tab === "categorias"}
+          disabled={saving || tab === "cupones" || tab === "categorias" || tab === "reiniciar"}
           className="bg-red-600 text-white px-5 py-2 rounded-lg font-semibold hover:bg-red-700 disabled:opacity-50 text-sm"
         >
           {saving ? "Guardando..." : "Guardar"}
@@ -563,6 +602,83 @@ export default function ConfigPage() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB: Reiniciar */}
+      {tab === "reiniciar" && (
+        <div className="space-y-4">
+          <div className="bg-red-50 border-2 border-red-300 rounded-xl p-5 space-y-4">
+            <div className="flex items-start gap-3">
+              <span className="text-3xl">⚠️</span>
+              <div>
+                <h3 className="font-black text-red-700 text-lg">Reiniciar Sistema</h3>
+                <p className="text-sm text-red-600 mt-1">
+                  Esta accion borra <strong>todos los datos operativos</strong> de forma permanente e irreversible.
+                  Usalo solo para empezar desde cero con datos reales.
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-white border border-red-200 rounded-xl p-4 space-y-1.5">
+              <p className="text-xs font-bold text-gray-700 mb-2">Se eliminara:</p>
+              {[
+                "Pedidos (POS y clientes app)",
+                "Ventas registradas",
+                "Caja diaria (todos los registros)",
+                "Gastos",
+                "Compras a proveedores",
+                "Merma",
+                "Recetas",
+                "Productos del menu",
+                "Inventario / ingredientes",
+              ].map((item) => (
+                <div key={item} className="flex items-center gap-2 text-sm text-gray-600">
+                  <span className="text-red-400 font-bold">✕</span> {item}
+                </div>
+              ))}
+            </div>
+
+            <div className="bg-green-50 border border-green-200 rounded-xl p-3">
+              <p className="text-xs font-bold text-green-700 mb-1">NO se eliminara:</p>
+              <div className="text-sm text-green-700 space-y-0.5">
+                <div>✅ Configuracion de la tienda</div>
+                <div>✅ Categorias del menu</div>
+                <div>✅ Cupones</div>
+              </div>
+            </div>
+
+            <div>
+              <label className="text-sm font-bold text-gray-700 block mb-2">
+                Para confirmar, escribe exactamente: <span className="font-mono text-red-600">BORRAR TODO</span>
+              </label>
+              <input
+                type="text"
+                value={resetInput}
+                onChange={(e) => { setResetInput(e.target.value); setResetMsg("") }}
+                placeholder="Escribe BORRAR TODO"
+                className="w-full border-2 border-red-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-red-500"
+              />
+            </div>
+
+            {resetPhase && (
+              <p className="text-sm text-orange-600 animate-pulse font-medium">{resetPhase}</p>
+            )}
+
+            {resetMsg && (
+              <div className={`text-sm font-medium px-4 py-2 rounded-lg ${resetMsg.includes("✅") ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                {resetMsg}
+              </div>
+            )}
+
+            <button
+              onClick={resetearSistema}
+              disabled={resetInput !== "BORRAR TODO" || resetting}
+              className="w-full bg-red-600 text-white py-3 rounded-xl font-black text-sm hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              {resetting ? "Borrando datos..." : "Reiniciar Sistema Completo"}
+            </button>
           </div>
         </div>
       )}

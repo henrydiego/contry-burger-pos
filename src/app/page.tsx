@@ -15,7 +15,8 @@ import {
 } from "recharts"
 
 interface DashboardData {
-  ventasHoy: number
+  ventasPosHoy: number
+  ventasAppHoy: number
   ventasMes: number
   gastosMes: number
   gananciaNeta: number
@@ -23,7 +24,6 @@ interface DashboardData {
   resumenFinanciero: Record<string, unknown>[]
   alertasStock: Record<string, unknown>[]
   ventasPorDia: { dia: string; total: number }[]
-  ingresosHoy: number
   gastosHoy: number
   nPedidos: number
   ticketPromedio: number
@@ -31,7 +31,8 @@ interface DashboardData {
 
 export default function Dashboard() {
   const [data, setData] = useState<DashboardData>({
-    ventasHoy: 0,
+    ventasPosHoy: 0,
+    ventasAppHoy: 0,
     ventasMes: 0,
     gastosMes: 0,
     gananciaNeta: 0,
@@ -39,7 +40,6 @@ export default function Dashboard() {
     resumenFinanciero: [],
     alertasStock: [],
     ventasPorDia: [],
-    ingresosHoy: 0,
     gastosHoy: 0,
     nPedidos: 0,
     ticketPromedio: 0,
@@ -56,20 +56,24 @@ export default function Dashboard() {
       const mesActual = hoy.slice(0, 7)
       const hace7dias = new Date(Date.now() - 7 * 86400000).toISOString().split("T")[0]
 
-      const [ventasRes, gastosRes, inventarioRes, cajaRes] = await Promise.all([
+      const [ventasRes, gastosRes, inventarioRes, pedidosHoyRes] = await Promise.all([
         supabase.from("ventas").select("*").gte("fecha", hace7dias),
         supabase.from("gastos").select("*"),
         supabase.from("inventario").select("*"),
-        supabase.from("caja_diaria").select("*").eq("fecha", hoy),
+        supabase.from("pedidos").select("total, metodo_pago, fecha").eq("fecha", hoy).eq("estado", "entregado"),
       ])
 
       const ventas = ventasRes.data || []
       const gastos = gastosRes.data || []
       const inventario = inventarioRes.data || []
-      const cajaHoy = cajaRes.data || []
+      const pedidosHoy = pedidosHoyRes.data || []
 
+      // POS sales (from ventas table — cashier)
       const ventasHoyArr = ventas.filter((v) => v.fecha === hoy)
-      const ventasHoy = ventasHoyArr.reduce((s: number, v: Record<string, unknown>) => s + (Number(v.total) || 0), 0)
+      const ventasPosHoy = ventasHoyArr.reduce((s: number, v: Record<string, unknown>) => s + (Number(v.total) || 0), 0)
+
+      // App sales (from pedidos table — online customers)
+      const ventasAppHoy = pedidosHoy.reduce((s: number, p: Record<string, unknown>) => s + (Number(p.total) || 0), 0)
 
       const ventasMesArr = ventas.filter((v) => String(v.fecha).startsWith(mesActual))
       const ventasMes = ventasMesArr.reduce((s: number, v: Record<string, unknown>) => s + (Number(v.total) || 0), 0)
@@ -77,9 +81,12 @@ export default function Dashboard() {
       const gastosMesArr = gastos.filter((g) => String(g.fecha).startsWith(mesActual))
       const gastosMes = gastosMesArr.reduce((s: number, g: Record<string, unknown>) => s + (Number(g.monto) || 0), 0)
 
+      const gastosHoyArr = gastos.filter((g) => String(g.fecha) === hoy)
+      const gastosHoy = gastosHoyArr.reduce((s: number, g: Record<string, unknown>) => s + (Number(g.monto) || 0), 0)
+
       const gananciaNeta = ventasMes - gastosMes
 
-      // Top 5 productos
+      // Top 5 productos — combined POS + App
       const prodMap: Record<string, { producto: string; cantidad: number; total: number }> = {}
       ventas.forEach((v) => {
         const key = String(v.producto_id || v.producto)
@@ -98,14 +105,15 @@ export default function Dashboard() {
       const orderIds = Array.from(new Set(ventasMesArr.map((v) => v.order_id)))
       const nPedidos = orderIds.length
       const ticketPromedio = nPedidos > 0 ? ventasMes / nPedidos : 0
-      const margen = ventasMes > 0 ? ((gananciaNeta / ventasMes) * 100) : 0
+      const ventasMesTotal = ventasMes // ventas POS del mes (pedidos app no tienen fecha de mes aun)
+      const margen = ventasMesTotal > 0 ? ((gananciaNeta / ventasMesTotal) * 100) : 0
 
       const resumenFinanciero = [
-        { concepto: "Total Ventas", valor: `$${ventasMes.toFixed(2)}` },
-        { concepto: "Gastos", valor: `$${gastosMes.toFixed(2)}` },
+        { concepto: "Ventas POS Mes", valor: `$${ventasMes.toFixed(2)}` },
+        { concepto: "Gastos Mes", valor: `$${gastosMes.toFixed(2)}` },
         { concepto: "Ganancia", valor: `$${gananciaNeta.toFixed(2)}` },
         { concepto: "Margen %", valor: `${margen.toFixed(1)}%` },
-        { concepto: "N Pedidos", valor: String(nPedidos) },
+        { concepto: "N Pedidos POS", valor: String(nPedidos) },
         { concepto: "Ticket Prom.", valor: `$${ticketPromedio.toFixed(2)}` },
       ]
 
@@ -135,12 +143,9 @@ export default function Dashboard() {
         .map(([dia, total]) => ({ dia, total }))
         .sort((a, b) => a.dia.localeCompare(b.dia))
 
-      // Caja info
-      const ingresosHoy = cajaHoy.reduce((s: number, c: Record<string, unknown>) => s + (Number(c.total_ingresos) || 0), 0)
-      const gastosHoy = cajaHoy.reduce((s: number, c: Record<string, unknown>) => s + (Number(c.gastos_dia) || 0), 0)
-
       setData({
-        ventasHoy,
+        ventasPosHoy,
+        ventasAppHoy,
         ventasMes,
         gastosMes,
         gananciaNeta,
@@ -148,7 +153,6 @@ export default function Dashboard() {
         resumenFinanciero,
         alertasStock: alertasStock as Record<string, unknown>[],
         ventasPorDia,
-        ingresosHoy,
         gastosHoy,
         nPedidos,
         ticketPromedio,
@@ -174,11 +178,11 @@ export default function Dashboard() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <StatCard title="Ventas Hoy" value={`$${data.ventasHoy.toFixed(2)}`} color="green" icon="💰" />
-        <StatCard title="Ventas Mes" value={`$${data.ventasMes.toFixed(2)}`} color="blue" icon="📈" />
+        <StatCard title="Ventas POS Hoy" value={`$${data.ventasPosHoy.toFixed(2)}`} color="blue" icon="🖥️" />
+        <StatCard title="Ventas App Hoy" value={`$${data.ventasAppHoy.toFixed(2)}`} color="green" icon="📱" />
         <StatCard title="Gastos Mes" value={`$${data.gastosMes.toFixed(2)}`} color="red" icon="💸" />
         <StatCard
-          title="Ganancia Neta"
+          title="Ganancia Neta Mes"
           value={`$${data.gananciaNeta.toFixed(2)}`}
           color={data.gananciaNeta >= 0 ? "green" : "red"}
           icon="🏆"
@@ -201,19 +205,35 @@ export default function Dashboard() {
         </div>
 
         <div className="bg-white rounded-lg shadow p-4 border">
-          <h3 className="font-semibold mb-4">Caja Hoy</h3>
-          <div className="space-y-3">
-            <div className="flex justify-between border-b pb-2">
-              <span className="text-sm text-gray-600">Ingresos Hoy</span>
-              <span className="font-bold text-green-600">${data.ingresosHoy.toFixed(2)}</span>
+          <h3 className="font-semibold mb-4">Resumen de Hoy</h3>
+          <div className="space-y-2">
+            <div className="flex justify-between items-center py-1.5 border-b">
+              <div>
+                <span className="text-sm text-gray-700 font-medium">Ventas POS</span>
+                <span className="ml-1 text-xs text-gray-400">(cajero)</span>
+              </div>
+              <span className="font-bold text-blue-600">${data.ventasPosHoy.toFixed(2)}</span>
             </div>
-            <div className="flex justify-between border-b pb-2">
+            <div className="flex justify-between items-center py-1.5 border-b">
+              <div>
+                <span className="text-sm text-gray-700 font-medium">Ventas App</span>
+                <span className="ml-1 text-xs text-gray-400">(clientes)</span>
+              </div>
+              <span className="font-bold text-purple-600">${data.ventasAppHoy.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between items-center py-1.5 border-b bg-gray-50 rounded px-1">
+              <span className="text-sm font-bold text-gray-800">Total Ingresos</span>
+              <span className="font-bold text-green-600">${(data.ventasPosHoy + data.ventasAppHoy).toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between items-center py-1.5 border-b">
               <span className="text-sm text-gray-600">Gastos Hoy</span>
-              <span className="font-bold text-red-600">${data.gastosHoy.toFixed(2)}</span>
+              <span className="font-bold text-red-500">${data.gastosHoy.toFixed(2)}</span>
             </div>
-            <div className="flex justify-between pt-2">
-              <span className="text-sm font-semibold">Neto</span>
-              <span className="font-bold">${(data.ingresosHoy - data.gastosHoy).toFixed(2)}</span>
+            <div className="flex justify-between items-center pt-1">
+              <span className="text-sm font-bold">Neto del Dia</span>
+              <span className={`font-black text-lg ${(data.ventasPosHoy + data.ventasAppHoy - data.gastosHoy) >= 0 ? "text-green-600" : "text-red-600"}`}>
+                ${(data.ventasPosHoy + data.ventasAppHoy - data.gastosHoy).toFixed(2)}
+              </span>
             </div>
           </div>
         </div>

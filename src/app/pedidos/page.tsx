@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from "react"
 import { supabase } from "@/lib/supabase"
 import StatCard from "@/components/StatCard"
+import html2canvas from "html2canvas"
 
 interface PedidoItem {
   producto_id: string
@@ -44,6 +45,8 @@ export default function PedidosPage() {
   const [pedidos, setPedidos] = useState<Pedido[]>([])
   const [loading, setLoading] = useState(true)
   const [filtroEstado, setFiltroEstado] = useState("todos")
+  const [ticketPedido, setTicketPedido] = useState<Pedido | null>(null)
+  const [guardandoImg, setGuardandoImg] = useState(false)
   const [procesando, setProcesando] = useState<Set<number>>(new Set())
   const [alertaTipo, setAlertaTipo] = useState<"normal" | "qr" | null>(null)
   const ultimoIdRef = useRef<number>(0)
@@ -173,6 +176,24 @@ export default function PedidosPage() {
   const preparando = pedidosHoy.filter((p) => p.estado === "preparando").length
   const listos = pedidosHoy.filter((p) => p.estado === "listo").length
   const totalHoy = pedidosHoy.reduce((s, p) => s + (Number(p.total) || 0), 0)
+
+  async function guardarComoImagen(pedido: Pedido) {
+    setGuardandoImg(true)
+    try {
+      const el = document.getElementById("recibo-pedido-print")
+      if (!el) return
+      const canvas = await html2canvas(el, { backgroundColor: "#ffffff", scale: 2 })
+      const link = document.createElement("a")
+      link.download = `recibo-${pedido.order_id}-${pedido.fecha}.png`
+      link.href = canvas.toDataURL("image/png")
+      link.click()
+    } catch (e) {
+      console.error(e)
+      alert("Error al guardar imagen")
+    } finally {
+      setGuardandoImg(false)
+    }
+  }
 
   if (loading) return <div className="text-gray-400 text-center py-8">Cargando pedidos...</div>
 
@@ -304,6 +325,12 @@ export default function PedidosPage() {
 
                 {/* Actions */}
                 <div className="p-3 border-t bg-gray-50 flex gap-2 flex-wrap">
+                  <button
+                    onClick={() => setTicketPedido(pedido)}
+                    className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 py-1.5 rounded text-xs font-semibold mb-1 flex items-center justify-center gap-1"
+                  >
+                    🧾 Ver / Imprimir Recibo
+                  </button>
                   {/* Verificar pago QR */}
                   {pedido.metodo_pago === "qr" && !pedido.pago_verificado && pedido.estado !== "cancelado" && (
                     <button
@@ -350,6 +377,116 @@ export default function PedidosPage() {
               </div>
             )
           })}
+        </div>
+      )}
+      {/* Modal Recibo Pedido App */}
+      {ticketPedido && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <style>{`
+            @media print {
+              body * { visibility: hidden !important; }
+              #recibo-pedido-print, #recibo-pedido-print * { visibility: visible !important; }
+              #recibo-pedido-print {
+                position: fixed !important; left: 0 !important; top: 0 !important;
+                width: 80mm !important; padding: 6mm !important; font-size: 11px !important;
+              }
+            }
+          `}</style>
+          <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full overflow-hidden">
+            {/* Botones acción */}
+            <div className="bg-gray-800 text-white p-3 flex items-center justify-between">
+              <span className="font-bold text-sm">Recibo Pedido App</span>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => window.print()}
+                  className="bg-white text-gray-800 px-3 py-1 rounded text-xs font-bold hover:bg-gray-100"
+                >
+                  🖨️ Imprimir
+                </button>
+                <button
+                  onClick={() => guardarComoImagen(ticketPedido)}
+                  disabled={guardandoImg}
+                  className="bg-blue-600 text-white px-3 py-1 rounded text-xs font-bold hover:bg-blue-700 disabled:opacity-60"
+                >
+                  {guardandoImg ? "..." : "💾 Guardar PNG"}
+                </button>
+                <button
+                  onClick={() => setTicketPedido(null)}
+                  className="bg-gray-600 text-white px-2 py-1 rounded text-xs hover:bg-gray-500"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            {/* Recibo imprimible */}
+            <div id="recibo-pedido-print" className="p-5 font-mono text-sm bg-white">
+              {/* Header */}
+              <div className="text-center mb-4 border-b-2 border-dashed border-gray-400 pb-3">
+                <p className="text-xl font-black tracking-wider">CONTRY BURGER</p>
+                <p className="text-xs text-gray-500">Pedido Online</p>
+                <p className="text-xs mt-1">{ticketPedido.fecha} — {ticketPedido.hora}</p>
+              </div>
+
+              {/* Ticket number */}
+              <div className="text-center mb-3">
+                <span className="bg-gray-800 text-white px-4 py-1 rounded text-base font-black tracking-widest">
+                  #{ticketPedido.order_id}
+                </span>
+              </div>
+
+              {/* Cliente */}
+              <div className="bg-gray-50 border rounded-lg p-2 mb-3 text-xs space-y-0.5">
+                <p><span className="text-gray-500">Cliente:</span> <strong>{ticketPedido.cliente_nombre}</strong></p>
+                {ticketPedido.cliente_telefono && <p><span className="text-gray-500">Tel:</span> {ticketPedido.cliente_telefono}</p>}
+                {ticketPedido.hora_recojo && <p><span className="text-gray-500">Recojo:</span> <strong>{ticketPedido.hora_recojo}</strong></p>}
+                {ticketPedido.direccion && <p><span className="text-gray-500">Direccion:</span> {ticketPedido.direccion}</p>}
+                {ticketPedido.notas && <p><span className="text-gray-500">Nota:</span> {ticketPedido.notas}</p>}
+              </div>
+
+              {/* Items */}
+              <div className="border-b border-dashed border-gray-400 pb-3 mb-3">
+                <div className="flex text-xs text-gray-500 mb-1">
+                  <span className="flex-1">PRODUCTO</span>
+                  <span className="w-8 text-center">CT</span>
+                  <span className="w-14 text-right">P.U.</span>
+                  <span className="w-16 text-right">TOTAL</span>
+                </div>
+                {(ticketPedido.items || []).map((item, i) => (
+                  <div key={i} className="flex text-xs py-0.5">
+                    <span className="flex-1 truncate">{item.nombre}</span>
+                    <span className="w-8 text-center">{item.cantidad}</span>
+                    <span className="w-14 text-right">${Number(item.precio_unitario).toFixed(2)}</span>
+                    <span className="w-16 text-right font-semibold">${Number(item.subtotal).toFixed(2)}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Total */}
+              <div className="space-y-1 mb-3">
+                <div className="flex justify-between font-black text-lg border-t-2 border-gray-800 pt-2">
+                  <span>TOTAL</span>
+                  <span>${Number(ticketPedido.total).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-xs text-gray-600">
+                  <span>Pago:</span>
+                  <span className={`font-semibold uppercase ${ticketPedido.pago_verificado ? "text-green-600" : "text-orange-600"}`}>
+                    {ticketPedido.metodo_pago} {ticketPedido.metodo_pago === "qr" ? (ticketPedido.pago_verificado ? "✅ Verificado" : "⏳ Pendiente") : ""}
+                  </span>
+                </div>
+                <div className="flex justify-between text-xs text-gray-600">
+                  <span>Estado:</span>
+                  <span className="font-semibold uppercase">{ticketPedido.estado}</span>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="text-center pt-3 border-t border-dashed border-gray-400 text-xs text-gray-500">
+                <p>Presente este recibo para retirar su pedido</p>
+                <p className="mt-1 font-semibold">¡Gracias por su preferencia!</p>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -22,6 +22,16 @@ interface StockAlert {
   unidad: string
 }
 
+interface TicketData {
+  orderId: string
+  cajero: string
+  items: CartItem[]
+  total: number
+  metodoPago: string
+  fecha: string
+  hora: string
+}
+
 export default function POSPage() {
   const [productos, setProductos] = useState<Producto[]>([])
   const [recetas, setRecetas] = useState<Receta[]>([])
@@ -35,7 +45,7 @@ export default function POSPage() {
   const [procesando, setProcesando] = useState(false)
   const [orderId, setOrderId] = useState("")
   const [alertasStock, setAlertasStock] = useState<StockAlert[]>([])
-  const [ventaExitosa, setVentaExitosa] = useState("")
+  const [ticketData, setTicketData] = useState<TicketData | null>(null)
 
   const generateOrderId = useCallback(async () => {
     const { data } = await supabase
@@ -270,7 +280,16 @@ export default function POSPage() {
         setAlertasStock(alertasNuevas)
       }
 
-      setVentaExitosa(`${orderId} — $${total.toFixed(2)} | Costo: $${costoTotal.toFixed(2)} | Utilidad: $${utilidad.toFixed(2)}`)
+      // Show printable ticket
+      setTicketData({
+        orderId,
+        cajero: cajero.trim(),
+        items: [...carrito],
+        total,
+        metodoPago,
+        fecha: hoy,
+        hora,
+      })
       setCarrito([])
       const newId = await generateOrderId()
       setOrderId(newId)
@@ -443,16 +462,105 @@ export default function POSPage() {
           )}
         </div>
 
-        {/* Venta exitosa notification */}
-        {ventaExitosa && (
-          <div className="p-3 bg-green-50 border-t border-green-200">
-            <div className="flex items-center justify-between">
-              <p className="text-xs text-green-700 font-medium">Venta registrada: {ventaExitosa}</p>
-              <button onClick={() => setVentaExitosa("")} className="text-green-500 text-xs hover:text-green-700">X</button>
+      </div>
+
+      {/* Ticket Modal */}
+      {ticketData && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+          <style>{`
+            @media print {
+              body * { visibility: hidden !important; }
+              #ticket-print, #ticket-print * { visibility: visible !important; }
+              #ticket-print {
+                position: fixed !important;
+                left: 0 !important; top: 0 !important;
+                width: 80mm !important;
+                padding: 6mm !important;
+                font-size: 11px !important;
+              }
+            }
+          `}</style>
+          <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full mx-4 overflow-hidden">
+            {/* Modal header */}
+            <div className="bg-gray-800 text-white p-4 flex items-center justify-between">
+              <span className="font-bold">Ticket generado</span>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => window.print()}
+                  className="bg-white text-gray-800 px-3 py-1 rounded text-sm font-bold hover:bg-gray-100"
+                >
+                  🖨️ Imprimir
+                </button>
+                <button
+                  onClick={async () => {
+                    setTicketData(null)
+                    const newId = await generateOrderId()
+                    setOrderId(newId)
+                  }}
+                  className="bg-gray-600 text-white px-3 py-1 rounded text-sm hover:bg-gray-500"
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
+
+            {/* Ticket content — printable area */}
+            <div id="ticket-print" className="p-5 font-mono text-sm">
+              {/* Header */}
+              <div className="text-center mb-4 border-b-2 border-dashed border-gray-400 pb-3">
+                <p className="text-xl font-black tracking-wider">CONTRY BURGER</p>
+                <p className="text-xs text-gray-500">Punto de Venta</p>
+                <p className="text-xs mt-1">{ticketData.fecha} — {ticketData.hora}</p>
+                <p className="text-xs">Cajero: <strong>{ticketData.cajero}</strong></p>
+              </div>
+
+              {/* Ticket number */}
+              <div className="text-center mb-3">
+                <span className="bg-gray-800 text-white px-4 py-1 rounded text-base font-black tracking-widest">
+                  #{ticketData.orderId}
+                </span>
+              </div>
+
+              {/* Items */}
+              <div className="border-b border-dashed border-gray-400 pb-3 mb-3">
+                <div className="flex text-xs text-gray-500 mb-1">
+                  <span className="flex-1">PRODUCTO</span>
+                  <span className="w-8 text-center">CT</span>
+                  <span className="w-14 text-right">P.U.</span>
+                  <span className="w-16 text-right">TOTAL</span>
+                </div>
+                {ticketData.items.map((item, i) => (
+                  <div key={i} className="flex text-xs py-0.5">
+                    <span className="flex-1 truncate">{item.nombre}</span>
+                    <span className="w-8 text-center">{item.cantidad}</span>
+                    <span className="w-14 text-right">${item.precio_unitario.toFixed(2)}</span>
+                    <span className="w-16 text-right font-semibold">${item.subtotal.toFixed(2)}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Total */}
+              <div className="space-y-1">
+                <div className="flex justify-between font-black text-lg border-t-2 border-gray-800 pt-2">
+                  <span>TOTAL</span>
+                  <span>${ticketData.total.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-xs text-gray-600">
+                  <span>Método de pago:</span>
+                  <span className="font-semibold uppercase">{ticketData.metodoPago}</span>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="text-center mt-4 pt-3 border-t border-dashed border-gray-400 text-xs text-gray-500">
+                <p>Presente este ticket para</p>
+                <p>retirar su pedido</p>
+                <p className="mt-1 font-semibold">¡Gracias por su preferencia!</p>
+              </div>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Stock Alerts Modal */}
       {alertasStock.length > 0 && (
