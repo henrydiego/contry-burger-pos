@@ -105,6 +105,14 @@ export default function CajaPage() {
   async function abrirCaja() {
     if (!formApertura.cajero.trim()) { alert("Ingresa el nombre del cajero"); return }
     setGuardando(true)
+    // Verificación doble: evitar abrir caja dos veces el mismo día
+    const { data: existente } = await supabase.from("caja_diaria").select("id").eq("fecha", hoy).limit(1)
+    if (existente && existente.length > 0) {
+      setGuardando(false)
+      setShowAbrirForm(false)
+      loadTodo()
+      return
+    }
     const hora = new Date().toTimeString().split(" ")[0]
     const { error } = await supabase.from("caja_diaria").insert({
       fecha: hoy,

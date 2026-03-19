@@ -141,6 +141,14 @@ export default function PedidosPage() {
 
     setProcesando((prev) => new Set(prev).add(pedido.id))
     try {
+      // Verificación doble en servidor antes de procesar
+      const { data: estadoActual } = await supabase
+        .from("pedidos").select("estado").eq("id", pedido.id).single()
+      if (estadoActual?.estado === "entregado") {
+        fetchPedidos()
+        return
+      }
+
       const { data, error } = await supabase.rpc("procesar_entrega", {
         p_pedido_id: pedido.id,
       })

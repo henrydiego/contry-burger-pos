@@ -1,17 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-// Rate limiting: max 10 intentos por IP por hora
+// Rate limiting: max 3 intentos por IP cada 10 minutos
 const intentos = new Map<string, { count: number; reset: number }>()
 
 function checkRateLimit(ip: string): boolean {
   const now = Date.now()
   const entry = intentos.get(ip)
   if (!entry || now > entry.reset) {
-    intentos.set(ip, { count: 1, reset: now + 60 * 60 * 1000 })
+    intentos.set(ip, { count: 1, reset: now + 10 * 60 * 1000 })
     return true
   }
-  if (entry.count >= 10) return false
+  if (entry.count >= 3) return false
   entry.count++
   return true
 }
@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
 
   if (!checkRateLimit(ip)) {
     return NextResponse.json(
-      { ok: false, error: 'Demasiados intentos. Intenta de nuevo en una hora.' },
+      { ok: false, error: 'Demasiados intentos. Intenta de nuevo en 10 minutos.' },
       { status: 429 }
     )
   }
