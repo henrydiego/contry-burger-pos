@@ -14,7 +14,6 @@ interface Config {
   pedido_minimo: number
   mensaje_bienvenida: string
   whatsapp_phone: string
-  whatsapp_apikey: string
 }
 
 interface Cupon {
@@ -39,7 +38,6 @@ const DEFAULT: Config = {
   pedido_minimo: 0,
   mensaje_bienvenida: "¡Bienvenido! Haz tu pedido y te lo llevamos.",
   whatsapp_phone: "",
-  whatsapp_apikey: "",
 }
 
 export default function ConfigPage() {
@@ -89,7 +87,7 @@ export default function ConfigPage() {
   async function save() {
     setSaving(true)
     setMsg("")
-    const { error } = await supabase.from("configuracion").upsert({ id: 1, ...cfg, updated_at: new Date().toISOString() })
+    const { error } = await supabase.from("configuracion").upsert({ id: 1, ...cfg })
     setSaving(false)
     setMsg(error ? "Error al guardar" : "✅ Guardado")
     setTimeout(() => setMsg(""), 3000)
@@ -278,41 +276,45 @@ export default function ConfigPage() {
       {/* TAB: WhatsApp */}
       {tab === "whatsapp" && (
         <div className="bg-white rounded-xl border shadow p-5 space-y-4">
-          <h3 className="font-semibold text-gray-800">Notificaciones WhatsApp</h3>
-          <p className="text-sm text-gray-500">Recibirás un WhatsApp cada vez que llegue un pedido nuevo.</p>
+          <div>
+            <h3 className="font-semibold text-gray-800">Botón WhatsApp del negocio</h3>
+            <p className="text-sm text-gray-500 mt-1">
+              Este número aparece en el botón de WhatsApp del menú y en la pantalla de confirmación de pago QR,
+              para que el cliente te envíe manualmente la confirmación de su pago.
+            </p>
+          </div>
 
-          <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 space-y-2">
-            <p className="font-semibold text-yellow-800 text-sm">Configuración CallMeBot (gratis)</p>
-            <ol className="text-sm text-yellow-700 space-y-1 list-decimal list-inside">
-              <li>Guarda el número <strong>+34 644 04 45 44</strong> en tu WhatsApp como &quot;CallMeBot&quot;</li>
-              <li>Envíale el mensaje: <strong>I allow callmebot.com to send me messages</strong></li>
-              <li>Recibirás un mensaje con tu <strong>API Key</strong></li>
-              <li>Pega tu número (con código país, sin +) y el API Key abajo</li>
-            </ol>
+          <div className="bg-green-50 border border-green-200 rounded-xl p-4 space-y-1">
+            <p className="font-semibold text-green-800 text-sm">¿Cómo funciona?</p>
+            <p className="text-sm text-green-700">
+              Cuando el cliente paga por QR, ve un botón <strong>&quot;Ya pagué · Confirmar por WhatsApp&quot;</strong> que abre
+              WhatsApp con un mensaje pre-armado: pedido #, nombre, total y &quot;Ya realicé el pago por QR&quot;.
+              Tú recibes el mensaje y verificas el pago en el sistema.
+            </p>
           </div>
 
           <div>
-            <label className="text-xs text-gray-500 block mb-1">Tu número WhatsApp (ej: 51987654321)</label>
+            <label className="text-xs text-gray-500 block mb-1">Número WhatsApp del negocio (con código de país, sin +)</label>
             <input
               type="text"
-              placeholder="51987654321"
+              placeholder="59177541305"
               value={cfg.whatsapp_phone}
               onChange={(e) => setCfg((c) => ({ ...c, whatsapp_phone: e.target.value.replace(/\D/g, '') }))}
               className="w-full border rounded-lg px-3 py-2 text-sm font-mono"
             />
+            <p className="text-xs text-gray-400 mt-1">
+              Bolivia: 591 + tu número. Ej: <span className="font-mono">59177541305</span>
+            </p>
           </div>
-          <div>
-            <label className="text-xs text-gray-500 block mb-1">API Key de CallMeBot</label>
-            <input
-              type="text"
-              placeholder="1234567"
-              value={cfg.whatsapp_apikey}
-              onChange={(e) => setCfg((c) => ({ ...c, whatsapp_apikey: e.target.value.trim() }))}
-              className="w-full border rounded-lg px-3 py-2 text-sm font-mono"
-            />
-          </div>
+
+          {cfg.whatsapp_phone && (
+            <div className="bg-gray-50 border rounded-lg p-3 text-sm text-gray-600">
+              Vista previa del link: <span className="font-mono text-green-700">wa.me/{cfg.whatsapp_phone}</span>
+            </div>
+          )}
+
           <button onClick={save} disabled={saving} className="w-full bg-green-600 text-white py-2.5 rounded-lg font-bold hover:bg-green-700 disabled:opacity-50">
-            {saving ? "Guardando..." : "Guardar configuración WhatsApp"}
+            {saving ? "Guardando..." : "Guardar número WhatsApp"}
           </button>
         </div>
       )}
