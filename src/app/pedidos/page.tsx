@@ -100,6 +100,7 @@ export default function PedidosPage() {
   useEffect(() => {
     loadPedidos()
 
+    // Realtime para actualizaciones instantáneas
     const channel = supabase
       .channel("pedidos-changes")
       .on(
@@ -109,12 +110,18 @@ export default function PedidosPage() {
       )
       .subscribe()
 
-    return () => { supabase.removeChannel(channel) }
+    // Polling cada 3s como respaldo (por si realtime no dispara)
+    const interval = setInterval(() => { loadPedidos() }, 3000)
+
+    return () => {
+      supabase.removeChannel(channel)
+      clearInterval(interval)
+    }
   }, [loadPedidos])
 
   async function cambiarEstado(pedidoId: number, nuevoEstado: string) {
     await supabase.from("pedidos").update({ estado: nuevoEstado }).eq("id", pedidoId)
-    loadPedidos()
+    await loadPedidos()
   }
 
   async function verificarPago(pedidoId: number) {
