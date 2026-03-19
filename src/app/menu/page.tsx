@@ -656,16 +656,11 @@ export default function MenuPublico() {
                 </div>
 
                 {/* Info cards */}
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                   <div className="bg-gray-900 rounded-2xl p-6 text-center border border-gray-800/50">
                     <p className="text-4xl mb-2">⏱</p>
                     <p className="text-white font-bold text-xl">{config.tiempo_estimado}</p>
                     <p className="text-gray-500 text-sm mt-1">Tiempo estimado</p>
-                  </div>
-                  <div className="bg-gray-900 rounded-2xl p-6 text-center border border-gray-800/50">
-                    <p className="text-4xl mb-2">{config.costo_envio > 0 ? "🚗" : "🏪"}</p>
-                    <p className="text-white font-bold text-xl">{config.costo_envio > 0 ? `$${config.costo_envio.toFixed(2)}` : "Gratis"}</p>
-                    <p className="text-gray-500 text-sm mt-1">Envío a domicilio</p>
                   </div>
                   <div className="bg-gray-900 rounded-2xl p-6 text-center border border-gray-800/50">
                     <p className="text-4xl mb-2">🟢</p>
@@ -884,16 +879,11 @@ export default function MenuPublico() {
                 Ver menú →
               </button>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3">
               <div className="bg-gray-900 rounded-2xl p-4 text-center border border-gray-800/50">
                 <p className="text-2xl mb-1">⏱</p>
                 <p className="text-white font-bold text-sm">{config.tiempo_estimado}</p>
                 <p className="text-gray-500 text-xs">Tiempo estimado</p>
-              </div>
-              <div className="bg-gray-900 rounded-2xl p-4 text-center border border-gray-800/50">
-                <p className="text-2xl mb-1">{config.costo_envio > 0 ? "🚗" : "🏪"}</p>
-                <p className="text-white font-bold text-sm">{config.costo_envio > 0 ? `$${config.costo_envio.toFixed(2)}` : "Gratis"}</p>
-                <p className="text-gray-500 text-xs">Envío</p>
               </div>
               {config.pedido_minimo > 0 && (
                 <div className="col-span-2 bg-yellow-950/30 border border-yellow-800/30 rounded-2xl p-3 text-center">
