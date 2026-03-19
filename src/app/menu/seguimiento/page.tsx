@@ -59,7 +59,9 @@ function SeguimientoContent() {
       })
       .subscribe()
 
-    return () => { supabase.removeChannel(channel) }
+    const interval = setInterval(loadPedido, 8000)
+
+    return () => { supabase.removeChannel(channel); clearInterval(interval) }
   }, [orderId])
 
   useEffect(() => {

@@ -27,6 +27,23 @@ const CAT_ICON: Record<string, string> = {
   Hamburguesas: "🍔", "Hot Dogs": "🌭", Bebidas: "🥤", Combos: "🎁", Acompanantes: "🍟",
 }
 
+function generarSlots(apertura: string, cierre: string): string[] {
+  const slots: string[] = ["Lo antes posible"]
+  try {
+    const [hA, mA] = apertura.split(":").map(Number)
+    const [hC, mC] = cierre.split(":").map(Number)
+    let mins = hA * 60 + mA
+    const finMins = hC * 60 + mC
+    while (mins <= finMins) {
+      const h = Math.floor(mins / 60)
+      const m = mins % 60
+      slots.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`)
+      mins += 30
+    }
+  } catch { /* fallback: solo "Lo antes posible" */ }
+  return slots
+}
+
 function estaAbierto(cfg: Config) {
   if (!cfg.abierto) return false
   const now = new Date()
@@ -70,7 +87,7 @@ export default function MenuPublico() {
     nombre: "", telefono: "", notas: "", metodo_pago: "efectivo",
     direccion: "", latitud: null as number | null, longitud: null as number | null,
     tipo_entrega: "local" as "local" | "mesa" | "delivery",
-    numero_mesa: "",
+    numero_mesa: "", hora_recojo: "Lo antes posible",
   })
 
   /* ─── Effects ─── */
@@ -117,7 +134,7 @@ export default function MenuPublico() {
   async function logoutCliente() {
     await supabase.auth.signOut()
     setGoogleUser(null)
-    setCliente({ nombre: "", telefono: "", notas: "", metodo_pago: "efectivo", direccion: "", latitud: null, longitud: null, tipo_entrega: "local", numero_mesa: "" })
+    setCliente({ nombre: "", telefono: "", notas: "", metodo_pago: "efectivo", direccion: "", latitud: null, longitud: null, tipo_entrega: "local", numero_mesa: "", hora_recojo: "Lo antes posible" })
   }
 
   async function loginConGoogle() {
@@ -197,6 +214,7 @@ export default function MenuPublico() {
           latitud: cliente.latitud, longitud: cliente.longitud,
           direccion: cliente.direccion, cupon_codigo: cuponAplicado?.codigo || null,
           tipo_entrega: cliente.tipo_entrega, numero_mesa: cliente.numero_mesa,
+          hora_recojo: cliente.tipo_entrega === "local" ? cliente.hora_recojo : null,
         }),
       })
       let data: Record<string, unknown>
@@ -357,6 +375,30 @@ export default function MenuPublico() {
                     </button>
                   ))}
                 </div>
+                {cliente.tipo_entrega === "local" && (
+                  <div className="space-y-2">
+                    <p className="text-xs text-gray-400">¿A qué hora pasarás a recoger?</p>
+                    <div className="flex flex-wrap gap-2">
+                      {generarSlots(config.hora_apertura, config.hora_cierre).map(slot => (
+                        <button key={slot} type="button"
+                          onClick={() => setCliente(c => ({ ...c, hora_recojo: slot }))}
+                          className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-95 ${
+                            cliente.hora_recojo === slot
+                              ? "bg-red-600 text-white"
+                              : "bg-gray-800 border border-gray-700 text-gray-300 hover:border-gray-500"
+                          }`}>
+                          {slot}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-500">O escribe la hora:</span>
+                      <input type="time"
+                        onChange={e => { if (e.target.value) setCliente(c => ({ ...c, hora_recojo: e.target.value })) }}
+                        className="bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-red-500 transition-colors" />
+                    </div>
+                  </div>
+                )}
                 {cliente.tipo_entrega === "mesa" && (
                   <input type="number" placeholder="Número de mesa *" value={cliente.numero_mesa}
                     onChange={e => setCliente({ ...cliente, numero_mesa: e.target.value })} min="1"
@@ -435,7 +477,12 @@ export default function MenuPublico() {
                 <div className="flex justify-between items-start">
                   <span className="text-gray-500">Entrega</span>
                   <div className="text-right">
-                    {cliente.tipo_entrega === "local" && <span className="text-white">🏪 Recoger en local</span>}
+                    {cliente.tipo_entrega === "local" && (
+                    <div>
+                      <span className="text-white">🏪 Recoger en local</span>
+                      <span className="text-gray-400 text-xs block mt-0.5">⏰ {cliente.hora_recojo}</span>
+                    </div>
+                  )}
                     {cliente.tipo_entrega === "mesa" && <span className="text-white">🪑 Mesa #{cliente.numero_mesa}</span>}
                     {cliente.tipo_entrega === "delivery" && (
                       <>

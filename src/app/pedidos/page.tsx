@@ -29,6 +29,7 @@ interface Pedido {
   latitud: number | null
   longitud: number | null
   direccion: string | null
+  hora_recojo: string | null
 }
 
 const ESTADOS = [
@@ -245,6 +246,9 @@ export default function PedidosPage() {
                   <p className="text-xs text-gray-500">{pedido.cliente_telefono}</p>
                   {pedido.cliente_email && (
                     <p className="text-xs text-gray-400">{pedido.cliente_email}</p>
+                  )}
+                  {pedido.hora_recojo && (
+                    <p className="text-xs font-bold text-purple-700 mt-1 bg-purple-50 border border-purple-200 rounded-full px-2 py-0.5 inline-block">⏰ Recojo: {pedido.hora_recojo}</p>
                   )}
                   {pedido.notas && (
                     <p className="text-xs text-orange-600 mt-1">Nota: {pedido.notas}</p>

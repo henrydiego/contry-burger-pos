@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
     const {
       items, cliente_nombre, cliente_telefono, notas, metodo_pago,
       latitud, longitud, direccion, cupon_codigo,
-      tipo_entrega, numero_mesa,
+      tipo_entrega, numero_mesa, hora_recojo,
     } = body
 
     if (!items || !Array.isArray(items) || items.length === 0)
@@ -125,6 +125,7 @@ export async function POST(req: NextRequest) {
       descuento,
       cupon_codigo: cuponValido,
       costo_envio_aplicado: costoEnvio,
+      hora_recojo: tipo_entrega === 'local' ? (hora_recojo || 'Lo antes posible') : null,
     }
 
     // Insertar y obtener el id generado para usar como número de pedido
