@@ -20,6 +20,9 @@ interface Config {
   tiempo_estimado: string; costo_envio: number; pedido_minimo: number
   mensaje_bienvenida: string; whatsapp_phone: string
 }
+interface CategoriaDB {
+  nombre: string; icono: string; orden: number; activo: boolean
+}
 type Step = "menu" | "datos" | "confirmacion"
 type Tab = "inicio" | "menu" | "perfil"
 
@@ -58,6 +61,7 @@ export default function MenuPublico() {
 
   /* ─── State ─── */
   const [productos, setProductos] = useState<Producto[]>([])
+  const [categoriasDB, setCategoriasDB] = useState<CategoriaDB[]>([])
   const [carrito, setCarrito] = useState<CartItem[]>([])
   const [categoriaFiltro, setCategoriaFiltro] = useState("Todos")
   const [loading, setLoading] = useState(true)
@@ -122,12 +126,14 @@ export default function MenuPublico() {
   }
 
   async function loadAll() {
-    const [{ data: prods }, { data: cfg }] = await Promise.all([
-      supabase.from("productos").select("*").eq("activo", true).order("categoria"),
+    const [{ data: prods }, { data: cfg }, { data: cats }] = await Promise.all([
+      supabase.from("productos").select("*").eq("activo", true),
       supabase.from("configuracion").select("*").eq("id", 1).single(),
+      supabase.from("categorias").select("nombre,icono,orden,activo").eq("activo", true).order("orden"),
     ])
     setProductos(prods || [])
     if (cfg) setConfig(prev => ({ ...prev, ...cfg }))
+    setCategoriasDB(cats || [])
     setLoading(false)
   }
 
@@ -168,7 +174,17 @@ export default function MenuPublico() {
     else setCuponError(data.error || "Cupón inválido")
   }
 
-  const categorias = ["Todos", ...Array.from(new Set(productos.map(p => p.categoria)))]
+  // Categorías ordenadas según config; las que no están en DB van al final
+  const catNombresOrdenados = categoriasDB.map(c => c.nombre)
+  const catSinOrden = [...new Set(productos.map(p => p.categoria))].filter(c => !catNombresOrdenados.includes(c))
+  const categorias = ["Todos", ...catNombresOrdenados.filter(c => productos.some(p => p.categoria === c)), ...catSinOrden]
+
+  // Icono: primero busca en DB, luego CAT_ICON hardcoded
+  const getCatIcon = (cat: string) => {
+    const db = categoriasDB.find(c => c.nombre === cat)
+    return db?.icono || CAT_ICON[cat] || "🍽️"
+  }
+
   const productosFiltrados = categoriaFiltro === "Todos" ? productos : productos.filter(p => p.categoria === categoriaFiltro)
 
   function agregarAlCarrito(producto: Producto) {
@@ -671,7 +687,7 @@ export default function MenuPublico() {
                         ? "bg-red-600 text-white shadow-md shadow-red-900/30"
                         : "bg-gray-800 text-gray-400 hover:bg-gray-700 border border-gray-700/50"
                     }`}>
-                    {cat !== "Todos" && CAT_ICON[cat] ? `${CAT_ICON[cat]} ` : ""}{cat}
+                    {cat !== "Todos" ? `${getCatIcon(cat)} ` : ""}{cat}
                   </button>
                 ))}
               </div>
@@ -723,7 +739,7 @@ export default function MenuPublico() {
                     {categorias.filter(c => c !== "Todos").map(cat => (
                       <button key={cat} onClick={() => { setCategoriaFiltro(cat); setActiveTab("menu") }}
                         className="bg-gray-900 hover:bg-gray-800 border border-gray-800/50 hover:border-gray-600 rounded-2xl p-4 text-center transition-all hover:scale-105">
-                        <div className="text-4xl mb-2">{CAT_ICON[cat] ?? "🍽️"}</div>
+                        <div className="text-4xl mb-2">{getCatIcon(cat)}</div>
                         <p className="text-sm text-gray-300 font-semibold">{cat}</p>
                       </button>
                     ))}
@@ -944,7 +960,7 @@ export default function MenuPublico() {
                 {categorias.filter(c => c !== "Todos").map(cat => (
                   <button key={cat} onClick={() => { setCategoriaFiltro(cat); setActiveTab("menu") }}
                     className="bg-gray-900 hover:bg-gray-800 border border-gray-800/50 rounded-2xl p-3.5 text-center transition-all active:scale-95">
-                    <div className="text-2xl mb-1">{CAT_ICON[cat] ?? "🍽️"}</div>
+                    <div className="text-2xl mb-1">{getCatIcon(cat)}</div>
                     <p className="text-xs text-gray-300 font-medium leading-tight">{cat}</p>
                   </button>
                 ))}
@@ -964,7 +980,7 @@ export default function MenuPublico() {
                       ? "bg-red-600 text-white shadow-md shadow-red-900/30"
                       : "bg-gray-800 text-gray-400 hover:bg-gray-700 border border-gray-700/50"
                   }`}>
-                  {cat !== "Todos" && CAT_ICON[cat] ? `${CAT_ICON[cat]} ` : ""}{cat}
+                  {cat !== "Todos" ? `${getCatIcon(cat)} ` : ""}{cat}
                 </button>
               ))}
             </div>

@@ -16,6 +16,14 @@ interface Config {
   whatsapp_phone: string
 }
 
+interface Categoria {
+  id: number
+  nombre: string
+  icono: string
+  orden: number
+  activo: boolean
+}
+
 interface Cupon {
   id: number
   codigo: string
@@ -45,7 +53,7 @@ export default function ConfigPage() {
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [msg, setMsg] = useState("")
-  const [tab, setTab] = useState<"tienda" | "delivery" | "whatsapp" | "cupones">("tienda")
+  const [tab, setTab] = useState<"tienda" | "delivery" | "whatsapp" | "cupones" | "categorias">("tienda")
   const fileRef = useRef<HTMLInputElement>(null)
 
   // Cupones
@@ -53,14 +61,69 @@ export default function ConfigPage() {
   const [nuevoCupon, setNuevoCupon] = useState({ codigo: "", tipo: "porcentaje", valor: "", usos_max: "100", fecha_vencimiento: "" })
   const [savingCupon, setSavingCupon] = useState(false)
 
+  // Categorías
+  const [categorias, setCategorias] = useState<Categoria[]>([])
+  const [nuevaCat, setNuevaCat] = useState({ nombre: "", icono: "🍽️" })
+  const [savingCat, setSavingCat] = useState(false)
+
   useEffect(() => {
     loadConfig()
     loadCupones()
+    loadCategorias()
   }, [])
 
   async function loadConfig() {
     const { data } = await supabase.from("configuracion").select("*").eq("id", 1).single()
     if (data) setCfg({ ...DEFAULT, ...data })
+  }
+
+  async function loadCategorias() {
+    const { data } = await supabase.from("categorias").select("*").order("orden")
+    setCategorias(data || [])
+  }
+
+  async function moverCategoria(id: number, direccion: "arriba" | "abajo") {
+    const idx = categorias.findIndex(c => c.id === id)
+    const otro = direccion === "arriba" ? categorias[idx - 1] : categorias[idx + 1]
+    if (!otro) return
+    const cat = categorias[idx]
+    await Promise.all([
+      supabase.from("categorias").update({ orden: otro.orden }).eq("id", cat.id),
+      supabase.from("categorias").update({ orden: cat.orden }).eq("id", otro.id),
+    ])
+    loadCategorias()
+  }
+
+  async function toggleCategoria(id: number, activo: boolean) {
+    await supabase.from("categorias").update({ activo: !activo }).eq("id", id)
+    loadCategorias()
+  }
+
+  async function actualizarIcono(id: number, icono: string) {
+    await supabase.from("categorias").update({ icono }).eq("id", id)
+    loadCategorias()
+  }
+
+  async function eliminarCategoria(id: number, nombre: string) {
+    if (!confirm(`¿Eliminar categoría "${nombre}"?`)) return
+    await supabase.from("categorias").delete().eq("id", id)
+    loadCategorias()
+  }
+
+  async function agregarCategoria() {
+    if (!nuevaCat.nombre.trim()) return
+    setSavingCat(true)
+    const maxOrden = categorias.length > 0 ? Math.max(...categorias.map(c => c.orden)) + 1 : 1
+    const { error } = await supabase.from("categorias").insert({
+      nombre: nuevaCat.nombre.trim(),
+      icono: nuevaCat.icono || "🍽️",
+      orden: maxOrden,
+      activo: true,
+    })
+    setSavingCat(false)
+    if (error) { alert("Error: " + error.message); return }
+    setNuevaCat({ nombre: "", icono: "🍽️" })
+    loadCategorias()
   }
 
   async function loadCupones() {
@@ -125,6 +188,7 @@ export default function ConfigPage() {
     { key: "tienda", label: "Tienda & QR" },
     { key: "delivery", label: "Delivery" },
     { key: "whatsapp", label: "WhatsApp" },
+    { key: "categorias", label: "📂 Categorías" },
     { key: "cupones", label: "Cupones" },
   ] as const
 
@@ -316,6 +380,88 @@ export default function ConfigPage() {
           <button onClick={save} disabled={saving} className="w-full bg-green-600 text-white py-2.5 rounded-lg font-bold hover:bg-green-700 disabled:opacity-50">
             {saving ? "Guardando..." : "Guardar número WhatsApp"}
           </button>
+        </div>
+      )}
+
+      {/* TAB: Categorías */}
+      {tab === "categorias" && (
+        <div className="space-y-4">
+          <div className="bg-white rounded-xl border shadow p-5 space-y-4">
+            <div>
+              <h3 className="font-semibold text-gray-800">Orden de categorías en el menú</h3>
+              <p className="text-sm text-gray-500 mt-1">Usa las flechas ↑↓ para cambiar el orden. El cliente verá las categorías en este orden.</p>
+            </div>
+
+            {/* Lista ordenable */}
+            <div className="divide-y border rounded-xl overflow-hidden">
+              {categorias.map((cat, idx) => (
+                <div key={cat.id} className={`flex items-center gap-3 px-4 py-3 bg-white hover:bg-gray-50 transition-colors ${!cat.activo ? "opacity-50" : ""}`}>
+                  {/* Número de orden */}
+                  <span className="w-7 h-7 rounded-full bg-gray-100 text-gray-500 text-xs font-black flex items-center justify-center shrink-0">
+                    {idx + 1}
+                  </span>
+
+                  {/* Icono editable */}
+                  <input
+                    type="text"
+                    value={cat.icono}
+                    onChange={e => actualizarIcono(cat.id, e.target.value)}
+                    className="w-10 text-center text-xl border rounded-lg py-1 focus:outline-none focus:border-red-400"
+                    maxLength={4}
+                  />
+
+                  {/* Nombre */}
+                  <span className="flex-1 font-semibold text-gray-800 text-sm">{cat.nombre}</span>
+
+                  {/* Toggle visible */}
+                  <button onClick={() => toggleCategoria(cat.id, cat.activo)}
+                    className={`text-xs font-semibold px-2 py-1 rounded-full ${cat.activo ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
+                    {cat.activo ? "Visible" : "Oculta"}
+                  </button>
+
+                  {/* Flechas */}
+                  <div className="flex flex-col gap-0.5 shrink-0">
+                    <button
+                      onClick={() => moverCategoria(cat.id, "arriba")}
+                      disabled={idx === 0}
+                      className="w-7 h-6 bg-gray-100 hover:bg-gray-200 rounded text-gray-600 disabled:opacity-20 flex items-center justify-center text-xs font-bold transition-colors">
+                      ↑
+                    </button>
+                    <button
+                      onClick={() => moverCategoria(cat.id, "abajo")}
+                      disabled={idx === categorias.length - 1}
+                      className="w-7 h-6 bg-gray-100 hover:bg-gray-200 rounded text-gray-600 disabled:opacity-20 flex items-center justify-center text-xs font-bold transition-colors">
+                      ↓
+                    </button>
+                  </div>
+
+                  {/* Eliminar */}
+                  <button onClick={() => eliminarCategoria(cat.id, cat.nombre)}
+                    className="text-gray-300 hover:text-red-500 transition-colors text-sm shrink-0">
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {/* Agregar nueva categoría */}
+            <div className="border-t pt-4">
+              <p className="text-xs text-gray-500 mb-2 font-semibold">Agregar nueva categoría</p>
+              <div className="flex gap-2">
+                <input type="text" placeholder="🍕" value={nuevaCat.icono}
+                  onChange={e => setNuevaCat(c => ({ ...c, icono: e.target.value }))}
+                  className="w-14 text-center text-xl border rounded-lg py-2 focus:outline-none focus:border-red-400" maxLength={4} />
+                <input type="text" placeholder="Nombre de la categoría" value={nuevaCat.nombre}
+                  onChange={e => setNuevaCat(c => ({ ...c, nombre: e.target.value }))}
+                  onKeyDown={e => { if (e.key === "Enter") agregarCategoria() }}
+                  className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-red-400" />
+                <button onClick={agregarCategoria} disabled={savingCat || !nuevaCat.nombre.trim()}
+                  className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-red-700 disabled:opacity-50 shrink-0">
+                  {savingCat ? "..." : "+ Agregar"}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
