@@ -394,8 +394,11 @@ export default function PedidosPage() {
           `}</style>
           <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full overflow-hidden">
             {/* Botones acción */}
-            <div className="bg-gray-800 text-white p-3 flex items-center justify-between">
-              <span className="font-bold text-sm">Recibo Pedido App</span>
+            <div className="bg-purple-800 text-white p-3 flex items-center justify-between">
+              <div>
+                <span className="font-bold text-sm">Pedido On Line — Recibo</span>
+                <p className="text-purple-300 text-xs">{ticketPedido.order_id} · {ticketPedido.cliente_nombre}</p>
+              </div>
               <div className="flex gap-2">
                 <button
                   onClick={() => window.print()}
@@ -424,7 +427,9 @@ export default function PedidosPage() {
               {/* Header */}
               <div className="text-center mb-4 border-b-2 border-dashed border-gray-400 pb-3">
                 <p className="text-xl font-black tracking-wider">CONTRY BURGER</p>
-                <p className="text-xs text-gray-500">Pedido Online</p>
+                <div className="inline-block bg-purple-700 text-white text-xs font-black px-3 py-0.5 rounded-full mt-1 mb-1 tracking-widest">
+                  PEDIDO ON LINE
+                </div>
                 <p className="text-xs mt-1">{ticketPedido.fecha} — {ticketPedido.hora}</p>
               </div>
 

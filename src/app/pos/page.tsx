@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react"
 import { supabase } from "@/lib/supabase"
 import { Producto, Receta, Inventario } from "@/lib/types"
+import html2canvas from "html2canvas"
 
 interface CartItem {
   producto_id: string
@@ -46,6 +47,7 @@ export default function POSPage() {
   const [orderId, setOrderId] = useState("")
   const [alertasStock, setAlertasStock] = useState<StockAlert[]>([])
   const [ticketData, setTicketData] = useState<TicketData | null>(null)
+  const [guardandoImg, setGuardandoImg] = useState(false)
 
   const generateOrderId = useCallback(async () => {
     const { data } = await supabase
@@ -306,6 +308,23 @@ export default function POSPage() {
     }
   }
 
+  async function guardarTicketImagen() {
+    setGuardandoImg(true)
+    try {
+      const el = document.getElementById("ticket-print")
+      if (!el) return
+      const canvas = await html2canvas(el, { backgroundColor: "#ffffff", scale: 2 })
+      const link = document.createElement("a")
+      link.download = `venta-cajero-${ticketData?.orderId}-${ticketData?.fecha}.png`
+      link.href = canvas.toDataURL("image/png")
+      link.click()
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setGuardandoImg(false)
+    }
+  }
+
   if (loading) {
     return <div className="flex items-center justify-center h-full text-gray-400">Cargando productos...</div>
   }
@@ -482,14 +501,24 @@ export default function POSPage() {
           `}</style>
           <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full mx-4 overflow-hidden">
             {/* Modal header */}
-            <div className="bg-gray-800 text-white p-4 flex items-center justify-between">
-              <span className="font-bold">Ticket generado</span>
+            <div className="bg-blue-800 text-white p-4 flex items-center justify-between">
+              <div>
+                <span className="font-bold text-sm">Venta Cajero — Ticket generado</span>
+                <p className="text-blue-300 text-xs">{ticketData?.orderId} · {ticketData?.cajero}</p>
+              </div>
               <div className="flex gap-2">
                 <button
                   onClick={() => window.print()}
-                  className="bg-white text-gray-800 px-3 py-1 rounded text-sm font-bold hover:bg-gray-100"
+                  className="bg-white text-gray-800 px-3 py-1 rounded text-xs font-bold hover:bg-gray-100"
                 >
                   🖨️ Imprimir
+                </button>
+                <button
+                  onClick={guardarTicketImagen}
+                  disabled={guardandoImg}
+                  className="bg-blue-600 text-white px-3 py-1 rounded text-xs font-bold hover:bg-blue-500 disabled:opacity-60"
+                >
+                  {guardandoImg ? "..." : "💾 Guardar PNG"}
                 </button>
                 <button
                   onClick={async () => {
@@ -497,9 +526,9 @@ export default function POSPage() {
                     const newId = await generateOrderId()
                     setOrderId(newId)
                   }}
-                  className="bg-gray-600 text-white px-3 py-1 rounded text-sm hover:bg-gray-500"
+                  className="bg-gray-600 text-white px-2 py-1 rounded text-xs hover:bg-gray-500"
                 >
-                  Cerrar
+                  ✕
                 </button>
               </div>
             </div>
@@ -509,7 +538,9 @@ export default function POSPage() {
               {/* Header */}
               <div className="text-center mb-4 border-b-2 border-dashed border-gray-400 pb-3">
                 <p className="text-xl font-black tracking-wider">CONTRY BURGER</p>
-                <p className="text-xs text-gray-500">Punto de Venta</p>
+                <div className="inline-block bg-blue-700 text-white text-xs font-black px-3 py-0.5 rounded-full mt-1 mb-1 tracking-widest">
+                  VENTA CAJERO
+                </div>
                 <p className="text-xs mt-1">{ticketData.fecha} — {ticketData.hora}</p>
                 <p className="text-xs">Cajero: <strong>{ticketData.cajero}</strong></p>
               </div>
