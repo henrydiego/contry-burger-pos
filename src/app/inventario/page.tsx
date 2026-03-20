@@ -235,9 +235,11 @@ export default function InventarioPage() {
           { key: "ingrediente_id", label: "ID", width: "80px" },
           { key: "nombre", label: "Nombre", editable: true },
           { key: "categoria", label: "Categoria", editable: true },
+          { key: "unidad", label: "Unidad", editable: true },
+          { key: "stock_inicial", label: "Stock Inicial", type: "number", editable: true },
           { key: "stock_real", label: "Stock Real", type: "number" },
           { key: "stock_minimo", label: "Stock Min.", type: "number", editable: true },
-          { key: "unidad", label: "Unidad" },
+          { key: "costo_promedio", label: "Costo Prom.", type: "currency", editable: true },
           { key: "alerta", label: "Alerta" },
         ]}
         data={inventario as unknown as Record<string, unknown>[]}
