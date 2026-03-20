@@ -216,21 +216,24 @@ export default function ConfigPage() {
     if (!confirm("ULTIMA ADVERTENCIA: Se eliminaran todos los pedidos, ventas, caja, compras, inventario, productos y recetas. Esta accion NO se puede deshacer. ¿Continuar?")) return
     setResetting(true)
     setResetMsg("")
-    const tablas = [
-      "merma",
-      "ventas",
-      "caja_diaria",
-      "gastos",
-      "pedidos",
-      "compras",
-      "recetas",
-      "productos",
-      "inventario",
-    ]
+    // Orden importante: recetas antes que productos (FK constraint)
+    const tablasSerial = ["caja_diaria", "gastos", "pedidos"] // id SERIAL integer
+    const tablasUUID = ["merma", "ventas", "compras", "recetas"] // id UUID
+    const orden = [...tablasSerial, ...tablasUUID, "productos", "inventario"]
+
     const errores: string[] = []
-    for (const tabla of tablas) {
+    for (const tabla of orden) {
       setResetPhase(`Borrando ${tabla}...`)
-      const { error } = await supabase.from(tabla).delete().gte("id", 0)
+      let error: { message: string } | null = null
+      if (tablasSerial.includes(tabla)) {
+        ;({ error } = await supabase.from(tabla).delete().gte("id", 0))
+      } else if (tablasUUID.includes(tabla)) {
+        ;({ error } = await supabase.from(tabla).delete().neq("id", "00000000-0000-0000-0000-000000000000"))
+      } else if (tabla === "productos") {
+        ;({ error } = await supabase.from(tabla).delete().neq("id", ""))
+      } else if (tabla === "inventario") {
+        ;({ error } = await supabase.from(tabla).delete().neq("ingrediente_id", ""))
+      }
       if (error) errores.push(`${tabla}: ${error.message}`)
     }
     setResetting(false)
