@@ -121,7 +121,11 @@ export default function InventarioPage() {
   async function eliminarInventario(idx: number) {
     const item = inventario[idx]
     if (!confirm(`Eliminar "${item.nombre}"?`)) return
-    await supabase.from("inventario").delete().eq("ingrediente_id", item.ingrediente_id)
+    const { error } = await supabase.from("inventario").delete().eq("ingrediente_id", item.ingrediente_id)
+    if (error) {
+      alert(`No se pudo eliminar "${item.nombre}".\n\nMotivo: ${error.message}\n\nSi este ingrediente está en una receta, primero elimínalo de Recetas.`)
+      return
+    }
     loadData()
   }
 
