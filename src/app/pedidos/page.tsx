@@ -91,7 +91,11 @@ export default function PedidosPage() {
       .order("id", { ascending: false })
       .limit(200)
     const lista = (data as Pedido[]) || []
-    if (lista.length === 0) return
+    setLoading(false)
+    if (lista.length === 0) {
+      setPedidos([])
+      return
+    }
     if (ultimoIdRef.current > 0 && lista[0].id > ultimoIdRef.current) {
       const esQr = lista[0].metodo_pago === "qr" && !lista[0].pago_verificado
       sonarAlerta(esQr)
