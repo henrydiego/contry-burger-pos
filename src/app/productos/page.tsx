@@ -18,7 +18,7 @@ interface Producto {
 
 export default function ProductosPage() {
   const [productos, setProductos] = useState<Producto[]>([])
-  const [categorias, setCategorias] = useState<string[]>([])
+  const [categorias, setCategorias] = useState<{ nombre: string; icono: string }[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [vistaFotos, setVistaFotos] = useState(false)
@@ -36,10 +36,10 @@ export default function ProductosPage() {
   async function loadAll() {
     const [{ data: prods }, { data: cats }] = await Promise.all([
       supabase.from("productos").select("*").order("categoria"),
-      supabase.from("categorias").select("nombre").eq("activo", true).order("orden"),
+      supabase.from("categorias").select("nombre, icono").eq("activo", true).order("orden"),
     ])
     setProductos((prods || []) as Producto[])
-    setCategorias((cats || []).map((c: { nombre: string }) => c.nombre))
+    setCategorias((cats || []) as { nombre: string; icono: string }[])
     setLoading(false)
   }
 
@@ -172,7 +172,7 @@ export default function ProductosPage() {
               <select value={form.categoria} onChange={e => setForm({ ...form, categoria: e.target.value })}
                 className="w-full border rounded-lg px-3 py-2 text-sm bg-white">
                 <option value="">— Seleccionar —</option>
-                {categorias.map(c => <option key={c}>{c}</option>)}
+                {categorias.map(c => <option key={c.nombre} value={c.nombre}>{c.icono} {c.nombre}</option>)}
               </select>
             </div>
             <div>
@@ -262,7 +262,7 @@ export default function ProductosPage() {
                 )}
                 {/* Badge categoría */}
                 <span className="absolute bottom-1 left-1 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded-full">
-                  {prod.categoria}
+                  {categorias.find(c => c.nombre === prod.categoria)?.icono} {prod.categoria}
                 </span>
               </div>
 
@@ -325,7 +325,9 @@ export default function ProductosPage() {
                         {prod.descripcion && <p className="text-xs text-gray-400 mt-0.5">{prod.descripcion}</p>}
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-gray-600">{prod.categoria}</td>
+                    <td className="px-4 py-3 text-gray-600">
+                      {categorias.find(c => c.nombre === prod.categoria)?.icono} {prod.categoria}
+                    </td>
                     <td className="px-4 py-3 text-right">
                       <EditableCell
                         value={prod.costoBase.toFixed(2)}

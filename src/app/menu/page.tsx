@@ -9,6 +9,7 @@ interface Producto {
   id: string; nombre: string; categoria: string
   precio_venta: number; activo: boolean
   imagen_url: string | null; agotado: boolean
+  descripcion: string | null
 }
 interface CartItem {
   producto_id: string; nombre: string
@@ -43,6 +44,9 @@ const SOCIAL_ICONS: Record<string, { icon: string; color: string }> = {
 
 const CAT_ICON: Record<string, string> = {
   Hamburguesas: "🍔", "Hot Dogs": "🌭", Bebidas: "🥤", Combos: "🎁", Acompanantes: "🍟",
+}
+function getCatIcon(categoria: string, categoriasDB: CategoriaDB[]): string {
+  return categoriasDB.find(c => c.nombre === categoria)?.icono ?? CAT_ICON[categoria] ?? "🍽️"
 }
 
 function generarSlots(apertura: string, cierre: string): string[] {
@@ -814,7 +818,7 @@ export default function MenuPublico() {
                             <img src={producto.imagen_url} alt={producto.nombre} className="w-full h-44 object-cover group-hover:scale-105 transition-transform duration-300" />
                           ) : (
                             <div className="w-full h-40 bg-gray-800 flex items-center justify-center text-6xl group-hover:scale-110 transition-transform duration-300">
-                              {CAT_ICON[producto.categoria] ?? "🍽️"}
+                              {getCatIcon(producto.categoria, categoriasDB)}
                             </div>
                           )}
                           {producto.agotado && (
@@ -829,13 +833,16 @@ export default function MenuPublico() {
                           )}
                           <div className="absolute top-3 left-3">
                             <span className="bg-gray-900/80 text-gray-300 text-xs px-2 py-0.5 rounded-full font-medium">
-                              {CAT_ICON[producto.categoria] ?? ""} {producto.categoria}
+                              {getCatIcon(producto.categoria, categoriasDB)} {producto.categoria}
                             </span>
                           </div>
                         </div>
                         {/* Info */}
                         <div className="p-4 flex flex-col flex-1">
                           <h3 className="font-bold text-white text-sm leading-tight mb-1 line-clamp-2">{producto.nombre}</h3>
+                          {producto.descripcion && (
+                            <p className="text-gray-400 text-xs leading-snug mb-2 line-clamp-2">{producto.descripcion}</p>
+                          )}
                           <p className="text-2xl font-black text-red-500 mb-4">${producto.precio_venta.toFixed(2)}</p>
                           {producto.agotado ? (
                             <div className="mt-auto bg-gray-800 text-gray-500 text-sm text-center py-2.5 rounded-xl font-medium">Agotado hoy</div>
@@ -1049,7 +1056,7 @@ export default function MenuPublico() {
                         <img src={producto.imagen_url} alt={producto.nombre} className="w-full h-36 object-cover" />
                       ) : (
                         <div className="w-full h-32 bg-gray-800 flex items-center justify-center text-5xl">
-                          {CAT_ICON[producto.categoria] ?? "🍽️"}
+                          {getCatIcon(producto.categoria, categoriasDB)}
                         </div>
                       )}
                       {producto.agotado && (
@@ -1065,6 +1072,9 @@ export default function MenuPublico() {
                     </div>
                     <div className="p-3 flex flex-col flex-1">
                       <h3 className="font-semibold text-white text-sm leading-tight line-clamp-2 mb-1">{producto.nombre}</h3>
+                      {producto.descripcion && (
+                        <p className="text-gray-400 text-xs leading-snug mb-2 line-clamp-2">{producto.descripcion}</p>
+                      )}
                       <p className="text-xl font-black text-red-500 mb-3">${producto.precio_venta.toFixed(2)}</p>
                       {producto.agotado ? (
                         <div className="mt-auto bg-gray-800 text-gray-500 text-xs text-center py-2 rounded-xl">Agotado hoy</div>
