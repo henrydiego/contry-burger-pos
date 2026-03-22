@@ -55,6 +55,16 @@ const DEFAULT: Config = {
   direccion_local: "",
 }
 
+const EMOJIS_COMIDA = [
+  "🍔","🌭","🍕","🌮","🌯","🥙","🧆","🥪","🥗","🍱",
+  "🍝","🍜","🍲","🍛","🍣","🍤","🍗","🥩","🥓","🍖",
+  "🍟","🧇","🥞","🧈","🥚","🍳","🥐","🥖","🧀","🥨",
+  "🧁","🎂","🍰","🍩","🍪","🍫","🍬","🍭","🍮","🍯",
+  "🥤","🧋","🍹","🍸","🥛","☕","🍵","🧃","🍺","🥂",
+  "🍦","🍧","🍨","🍡","🥟","🧄","🌽","🥕","🥦","🍎",
+  "🍗","🍽️","🥣","🫕","🌶️","🧅","🥜","🫘","🍿","🥫",
+]
+
 const PLATAFORMAS = [
   { id: "instagram", label: "Instagram", color: "#E1306C" },
   { id: "tiktok", label: "TikTok", color: "#000000" },
@@ -81,6 +91,7 @@ export default function ConfigPage() {
   const [categorias, setCategorias] = useState<Categoria[]>([])
   const [nuevaCat, setNuevaCat] = useState({ nombre: "", icono: "🍽️" })
   const [savingCat, setSavingCat] = useState(false)
+  const [showEmojiPicker, setShowEmojiPicker] = useState<number | "nueva" | null>(null)
 
   // Reinicio del sistema
   const [resetInput, setResetInput] = useState("")
@@ -546,44 +557,64 @@ export default function ConfigPage() {
             {/* Lista ordenable */}
             <div className="divide-y border rounded-xl overflow-hidden">
               {categorias.map((cat, idx) => (
-                <div key={cat.id} className={`flex items-center gap-2 px-3 py-3 bg-white hover:bg-gray-50 transition-colors ${!cat.activo ? "opacity-50" : ""}`}>
-                  {/* Número de orden */}
-                  <span className="w-6 h-6 rounded-full bg-gray-100 text-gray-500 text-xs font-black flex items-center justify-center shrink-0">
-                    {idx + 1}
-                  </span>
+                <div key={cat.id} className={`flex flex-col bg-white hover:bg-gray-50 transition-colors ${!cat.activo ? "opacity-50" : ""}`}>
+                  <div className="flex items-center gap-2 px-3 py-3">
+                    {/* Número de orden */}
+                    <span className="w-6 h-6 rounded-full bg-gray-100 text-gray-500 text-xs font-black flex items-center justify-center shrink-0">
+                      {idx + 1}
+                    </span>
 
-                  {/* Icono editable */}
-                  <input type="text" value={cat.icono}
-                    onChange={e => actualizarIcono(cat.id, e.target.value)}
-                    className="w-9 text-center text-lg border rounded-lg py-1 focus:outline-none focus:border-red-400"
-                    maxLength={4} />
+                    {/* Icono — clic abre selector */}
+                    <button
+                      onClick={() => setShowEmojiPicker(showEmojiPicker === cat.id ? null : cat.id)}
+                      className="w-9 h-9 text-xl border rounded-lg flex items-center justify-center hover:border-red-400 shrink-0 bg-white">
+                      {cat.icono || "🍽️"}
+                    </button>
 
-                  {/* Nombre */}
-                  <span className="flex-1 font-semibold text-gray-800 text-sm">{cat.nombre}</span>
+                    {/* Nombre */}
+                    <span className="flex-1 font-semibold text-gray-800 text-sm">{cat.nombre}</span>
 
-                  {/* Toggle visible en menú */}
-                  <button onClick={() => toggleCategoria(cat.id, cat.activo)}
-                    className={`text-xs font-semibold px-2 py-1 rounded-full shrink-0 ${cat.activo ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
-                    {cat.activo ? "✅ Menú" : "🚫 Oculta"}
-                  </button>
+                    {/* Toggle visible en menú */}
+                    <button onClick={() => toggleCategoria(cat.id, cat.activo)}
+                      className={`text-xs font-semibold px-2 py-1 rounded-full shrink-0 ${cat.activo ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
+                      {cat.activo ? "✅ Menú" : "🚫 Oculta"}
+                    </button>
 
-                  {/* Toggle extras */}
-                  <button onClick={() => toggleExtra(cat.id, cat.es_extra)}
-                    className={`text-xs font-semibold px-2 py-1 rounded-full shrink-0 ${cat.es_extra ? "bg-purple-100 text-purple-700 border border-purple-200" : "bg-gray-50 text-gray-400 border border-gray-200"}`}>
-                    {cat.es_extra ? "✨ Extra" : "+ Extra"}
-                  </button>
+                    {/* Toggle extras */}
+                    <button onClick={() => toggleExtra(cat.id, cat.es_extra)}
+                      className={`text-xs font-semibold px-2 py-1 rounded-full shrink-0 ${cat.es_extra ? "bg-purple-100 text-purple-700 border border-purple-200" : "bg-gray-50 text-gray-400 border border-gray-200"}`}>
+                      {cat.es_extra ? "✨ Extra" : "+ Extra"}
+                    </button>
 
-                  {/* Flechas */}
-                  <div className="flex flex-col gap-0.5 shrink-0">
-                    <button onClick={() => moverCategoria(cat.id, "arriba")} disabled={idx === 0}
-                      className="w-6 h-5 bg-gray-100 hover:bg-gray-200 rounded text-gray-600 disabled:opacity-20 flex items-center justify-center text-xs font-bold">↑</button>
-                    <button onClick={() => moverCategoria(cat.id, "abajo")} disabled={idx === categorias.length - 1}
-                      className="w-6 h-5 bg-gray-100 hover:bg-gray-200 rounded text-gray-600 disabled:opacity-20 flex items-center justify-center text-xs font-bold">↓</button>
+                    {/* Flechas */}
+                    <div className="flex flex-col gap-0.5 shrink-0">
+                      <button onClick={() => moverCategoria(cat.id, "arriba")} disabled={idx === 0}
+                        className="w-6 h-5 bg-gray-100 hover:bg-gray-200 rounded text-gray-600 disabled:opacity-20 flex items-center justify-center text-xs font-bold">↑</button>
+                      <button onClick={() => moverCategoria(cat.id, "abajo")} disabled={idx === categorias.length - 1}
+                        className="w-6 h-5 bg-gray-100 hover:bg-gray-200 rounded text-gray-600 disabled:opacity-20 flex items-center justify-center text-xs font-bold">↓</button>
+                    </div>
+
+                    {/* Eliminar */}
+                    <button onClick={() => eliminarCategoria(cat.id, cat.nombre)}
+                      className="text-gray-300 hover:text-red-500 transition-colors text-sm shrink-0">✕</button>
                   </div>
 
-                  {/* Eliminar */}
-                  <button onClick={() => eliminarCategoria(cat.id, cat.nombre)}
-                    className="text-gray-300 hover:text-red-500 transition-colors text-sm shrink-0">✕</button>
+                  {/* Selector de emojis */}
+                  {showEmojiPicker === cat.id && (
+                    <div className="px-3 pb-3">
+                      <div className="bg-gray-50 border rounded-xl p-2">
+                        <p className="text-xs text-gray-400 mb-2">Elige un ícono:</p>
+                        <div className="flex flex-wrap gap-1">
+                          {EMOJIS_COMIDA.map(e => (
+                            <button key={e} onClick={() => { actualizarIcono(cat.id, e); setShowEmojiPicker(null) }}
+                              className={`text-xl w-9 h-9 rounded-lg hover:bg-white hover:shadow transition-all flex items-center justify-center ${cat.icono === e ? "bg-white shadow ring-2 ring-red-400" : ""}`}>
+                              {e}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -591,10 +622,12 @@ export default function ConfigPage() {
             {/* Agregar nueva categoría */}
             <div className="border-t pt-4">
               <p className="text-xs text-gray-500 mb-2 font-semibold">Agregar nueva categoría</p>
-              <div className="flex gap-2">
-                <input type="text" placeholder="🍕" value={nuevaCat.icono}
-                  onChange={e => setNuevaCat(c => ({ ...c, icono: e.target.value }))}
-                  className="w-14 text-center text-xl border rounded-lg py-2 focus:outline-none focus:border-red-400" maxLength={4} />
+              <div className="flex gap-2 mb-2">
+                <button
+                  onClick={() => setShowEmojiPicker(showEmojiPicker === "nueva" ? null : "nueva")}
+                  className="w-12 h-10 text-xl border rounded-lg flex items-center justify-center hover:border-red-400 shrink-0 bg-white">
+                  {nuevaCat.icono}
+                </button>
                 <input type="text" placeholder="Nombre de la categoría" value={nuevaCat.nombre}
                   onChange={e => setNuevaCat(c => ({ ...c, nombre: e.target.value }))}
                   onKeyDown={e => { if (e.key === "Enter") agregarCategoria() }}
@@ -604,6 +637,19 @@ export default function ConfigPage() {
                   {savingCat ? "..." : "+ Agregar"}
                 </button>
               </div>
+              {showEmojiPicker === "nueva" && (
+                <div className="bg-gray-50 border rounded-xl p-2">
+                  <p className="text-xs text-gray-400 mb-2">Elige un ícono para la nueva categoría:</p>
+                  <div className="flex flex-wrap gap-1">
+                    {EMOJIS_COMIDA.map(e => (
+                      <button key={e} onClick={() => { setNuevaCat(c => ({ ...c, icono: e })); setShowEmojiPicker(null) }}
+                        className={`text-xl w-9 h-9 rounded-lg hover:bg-white hover:shadow transition-all flex items-center justify-center ${nuevaCat.icono === e ? "bg-white shadow ring-2 ring-red-400" : ""}`}>
+                        {e}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
