@@ -2,6 +2,7 @@ export interface Producto {
   id: string
   nombre: string
   categoria: string
+  descripcion?: string | null
   costo: number
   precio_venta: number
   activo: boolean

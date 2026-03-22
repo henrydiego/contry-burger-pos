@@ -342,13 +342,15 @@ export default function ProductosPage() {
                             placeholder="Agregar ingredientes..."
                             onSave={val => editarCampo(prod, "descripcion", val)}
                           />
-                          <button
-                            onClick={() => importarDescripcionDesdeReceta(prod)}
-                            disabled={importando === prod.id}
-                            title="Importar ingredientes desde la receta"
-                            className="text-[10px] text-blue-400 hover:text-blue-600 whitespace-nowrap shrink-0 disabled:opacity-50">
-                            {importando === prod.id ? "..." : "↙ receta"}
-                          </button>
+                          {!prod.descripcion && (
+                            <button
+                              onClick={() => importarDescripcionDesdeReceta(prod)}
+                              disabled={importando === prod.id}
+                              title="Importar ingredientes desde la receta"
+                              className="text-[10px] text-blue-400 hover:text-blue-600 whitespace-nowrap shrink-0 disabled:opacity-50">
+                              {importando === prod.id ? "..." : "↙ receta"}
+                            </button>
+                          )}
                         </div>
                       </div>
                     </td>

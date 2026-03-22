@@ -362,6 +362,9 @@ export default function POSPage() {
               <div className="text-2xl mb-2">🍔</div>
               <p className="font-semibold text-sm truncate">{producto.nombre}</p>
               <p className="text-xs text-gray-500">{producto.categoria}</p>
+              {producto.descripcion && (
+                <p className="text-[10px] text-gray-400 leading-snug line-clamp-2 mt-0.5">{producto.descripcion}</p>
+              )}
               <p className="text-lg font-bold text-[var(--primary)] mt-auto">
                 ${producto.precio_venta.toFixed(2)}
               </p>
