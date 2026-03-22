@@ -45,9 +45,6 @@ const SOCIAL_ICONS: Record<string, { icon: string; color: string }> = {
 const CAT_ICON: Record<string, string> = {
   Hamburguesas: "🍔", "Hot Dogs": "🌭", Bebidas: "🥤", Combos: "🎁", Acompanantes: "🍟",
 }
-function getCatIcon(categoria: string, categoriasDB: CategoriaDB[]): string {
-  return categoriasDB.find(c => c.nombre === categoria)?.icono ?? CAT_ICON[categoria] ?? "🍽️"
-}
 
 function generarSlots(apertura: string, cierre: string): string[] {
   const slots: string[] = ["Lo antes posible"]
@@ -818,7 +815,7 @@ export default function MenuPublico() {
                             <img src={producto.imagen_url} alt={producto.nombre} className="w-full h-44 object-cover group-hover:scale-105 transition-transform duration-300" />
                           ) : (
                             <div className="w-full h-40 bg-gray-800 flex items-center justify-center text-6xl group-hover:scale-110 transition-transform duration-300">
-                              {getCatIcon(producto.categoria, categoriasDB)}
+                              {getCatIcon(producto.categoria)}
                             </div>
                           )}
                           {producto.agotado && (
@@ -833,7 +830,7 @@ export default function MenuPublico() {
                           )}
                           <div className="absolute top-3 left-3">
                             <span className="bg-gray-900/80 text-gray-300 text-xs px-2 py-0.5 rounded-full font-medium">
-                              {getCatIcon(producto.categoria, categoriasDB)} {producto.categoria}
+                              {getCatIcon(producto.categoria)} {producto.categoria}
                             </span>
                           </div>
                         </div>
@@ -1056,7 +1053,7 @@ export default function MenuPublico() {
                         <img src={producto.imagen_url} alt={producto.nombre} className="w-full h-36 object-cover" />
                       ) : (
                         <div className="w-full h-32 bg-gray-800 flex items-center justify-center text-5xl">
-                          {getCatIcon(producto.categoria, categoriasDB)}
+                          {getCatIcon(producto.categoria)}
                         </div>
                       )}
                       {producto.agotado && (
