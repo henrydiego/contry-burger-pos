@@ -322,7 +322,11 @@ export default function ProductosPage() {
                     <td className="px-4 py-3">
                       <div>
                         <p className="font-semibold text-gray-900">{prod.nombre}</p>
-                        {prod.descripcion && <p className="text-xs text-gray-400 mt-0.5">{prod.descripcion}</p>}
+                        <EditableText
+                          value={prod.descripcion || ""}
+                          placeholder="Agregar ingredientes..."
+                          onSave={val => editarCampo(prod, "descripcion", val)}
+                        />
                       </div>
                     </td>
                     <td className="px-4 py-3 text-gray-600">
@@ -374,6 +378,30 @@ export default function ProductosPage() {
         </div>
       )}
     </div>
+  )
+}
+
+/* Texto editable con click (para descripción) */
+function EditableText({ value, placeholder, onSave }: { value: string; placeholder: string; onSave: (val: string) => void }) {
+  const [editing, setEditing] = useState(false)
+  const [val, setVal] = useState(value)
+
+  if (editing) {
+    return (
+      <input
+        type="text" value={val} autoFocus placeholder={placeholder}
+        onChange={e => setVal(e.target.value)}
+        onBlur={() => { setEditing(false); onSave(val) }}
+        onKeyDown={e => { if (e.key === "Enter") { setEditing(false); onSave(val) } if (e.key === "Escape") setEditing(false) }}
+        className="w-full border border-blue-400 rounded px-2 py-0.5 text-xs text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-300"
+      />
+    )
+  }
+  return (
+    <button onClick={() => { setVal(value); setEditing(true) }}
+      className={`text-xs mt-0.5 block text-left hover:underline cursor-pointer ${value ? "text-gray-400 hover:text-blue-600" : "text-gray-300 hover:text-blue-400"}`}>
+      {value || placeholder}
+    </button>
   )
 }
 
