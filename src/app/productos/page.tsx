@@ -16,10 +16,9 @@ interface Producto {
   imagen_url: string | null
 }
 
-const CATEGORIAS = ["Hamburguesas", "Hot Dogs", "Bebidas", "Combos", "Acompanantes"]
-
 export default function ProductosPage() {
   const [productos, setProductos] = useState<Producto[]>([])
+  const [categorias, setCategorias] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [vistaFotos, setVistaFotos] = useState(false)
@@ -32,12 +31,21 @@ export default function ProductosPage() {
   }
   const [form, setForm] = useState(formVacio)
 
-  useEffect(() => { loadProductos() }, [])
+  useEffect(() => { loadAll() }, [])
+
+  async function loadAll() {
+    const [{ data: prods }, { data: cats }] = await Promise.all([
+      supabase.from("productos").select("*").order("categoria"),
+      supabase.from("categorias").select("nombre").eq("activo", true).order("orden"),
+    ])
+    setProductos((prods || []) as Producto[])
+    setCategorias((cats || []).map((c: { nombre: string }) => c.nombre))
+    setLoading(false)
+  }
 
   async function loadProductos() {
     const { data } = await supabase.from("productos").select("*").order("categoria")
     setProductos((data || []) as Producto[])
-    setLoading(false)
   }
 
   async function guardarProducto() {
@@ -164,7 +172,7 @@ export default function ProductosPage() {
               <select value={form.categoria} onChange={e => setForm({ ...form, categoria: e.target.value })}
                 className="w-full border rounded-lg px-3 py-2 text-sm bg-white">
                 <option value="">— Seleccionar —</option>
-                {CATEGORIAS.map(c => <option key={c}>{c}</option>)}
+                {categorias.map(c => <option key={c}>{c}</option>)}
               </select>
             </div>
             <div>
