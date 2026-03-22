@@ -24,6 +24,7 @@ export default function ProductosPage() {
   const [vistaFotos, setVistaFotos] = useState(false)
   const [uploadingId, setUploadingId] = useState<string | null>(null)
   const [guardando, setGuardando] = useState(false)
+  const [importando, setImportando] = useState<string | null>(null)
   const fileRefs = useRef<Record<string, HTMLInputElement | null>>({})
 
   const formVacio = {
@@ -84,6 +85,19 @@ export default function ProductosPage() {
 
   async function toggleAgotado(prod: Producto) {
     await supabase.from("productos").update({ agotado: !prod.agotado }).eq("id", prod.id)
+    loadProductos()
+  }
+
+  async function importarDescripcionDesdeReceta(prod: Producto) {
+    setImportando(prod.id)
+    const { data } = await supabase
+      .from("recetas")
+      .select("ingrediente_nombre")
+      .eq("producto_id", prod.id)
+    setImportando(null)
+    if (!data || data.length === 0) { alert("Este producto no tiene receta con ingredientes."); return }
+    const descripcion = data.map((r: { ingrediente_nombre: string }) => r.ingrediente_nombre).join(", ")
+    await supabase.from("productos").update({ descripcion }).eq("id", prod.id)
     loadProductos()
   }
 
@@ -322,11 +336,20 @@ export default function ProductosPage() {
                     <td className="px-4 py-3">
                       <div>
                         <p className="font-semibold text-gray-900">{prod.nombre}</p>
-                        <EditableText
-                          value={prod.descripcion || ""}
-                          placeholder="Agregar ingredientes..."
-                          onSave={val => editarCampo(prod, "descripcion", val)}
-                        />
+                        <div className="flex items-center gap-1">
+                          <EditableText
+                            value={prod.descripcion || ""}
+                            placeholder="Agregar ingredientes..."
+                            onSave={val => editarCampo(prod, "descripcion", val)}
+                          />
+                          <button
+                            onClick={() => importarDescripcionDesdeReceta(prod)}
+                            disabled={importando === prod.id}
+                            title="Importar ingredientes desde la receta"
+                            className="text-[10px] text-blue-400 hover:text-blue-600 whitespace-nowrap shrink-0 disabled:opacity-50">
+                            {importando === prod.id ? "..." : "↙ receta"}
+                          </button>
+                        </div>
                       </div>
                     </td>
                     <td className="px-4 py-3 text-gray-600">
