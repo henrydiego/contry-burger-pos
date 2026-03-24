@@ -225,7 +225,7 @@ export default function RecetasPage() {
           { key: "producto_nombre", label: "Producto" },
           { key: "ingrediente_nombre", label: "Ingrediente" },
           { key: "cantidad", label: "Cantidad", type: "number", editable: true },
-          { key: "unidad", label: "Unidad" },
+          { key: "unidad", label: "Unidad", editable: true },
           { key: "costo_ingrediente", label: "Costo/Unid", type: "currency" },
           { key: "costo_linea", label: "Costo Linea", type: "currency" },
         ]}

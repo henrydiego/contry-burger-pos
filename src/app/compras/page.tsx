@@ -88,6 +88,24 @@ export default function ComprasPage() {
     loadData()
   }
 
+  async function editarCompra(rowIdx: number, key: string, value: string) {
+    const compra = compras[rowIdx]
+    const updateData: Record<string, unknown> = {}
+    if (key === "cantidad") {
+      const nueva = parseFloat(value) || 0
+      updateData.cantidad = nueva
+      updateData.costo_total = Number((nueva * (Number(compra.costo_unitario) || 0)).toFixed(2))
+    } else if (key === "costo_unitario") {
+      const nuevo = parseFloat(value) || 0
+      updateData.costo_unitario = nuevo
+      updateData.costo_total = Number(((Number(compra.cantidad) || 0) * nuevo).toFixed(2))
+    } else {
+      updateData[key] = value
+    }
+    await supabase.from("compras").update(updateData).eq("id", compra.id)
+    loadData()
+  }
+
   async function eliminarCompra(idx: number) {
     const compra = compras[idx]
     if (!confirm("Eliminar esta compra?")) return
@@ -210,15 +228,16 @@ export default function ComprasPage() {
             title="Historial de Compras"
             columns={[
               { key: "id", label: "# Compra", width: "90px" },
-              { key: "fecha", label: "Fecha", type: "date" },
+              { key: "fecha", label: "Fecha", type: "date", editable: true },
               { key: "ingrediente", label: "Ingrediente" },
-              { key: "proveedor", label: "Proveedor" },
-              { key: "cantidad", label: "Cant.", type: "number" },
+              { key: "proveedor", label: "Proveedor", editable: true },
+              { key: "cantidad", label: "Cant.", type: "number", editable: true },
               { key: "unidad", label: "Unidad" },
-              { key: "costo_unitario", label: "C. Unit.", type: "currency" },
+              { key: "costo_unitario", label: "C. Unit.", type: "currency", editable: true },
               { key: "costo_total", label: "Total", type: "currency" },
             ]}
             data={compras}
+            onEdit={editarCompra}
             onDelete={eliminarCompra}
           />
         </div>

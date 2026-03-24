@@ -80,6 +80,10 @@ export default function GastosPage() {
     const updateData: Record<string, unknown> = {}
     if (key === "monto") {
       updateData[key] = parseFloat(value) || 0
+    } else if (key === "fecha") {
+      updateData.fecha = value
+      updateData.mes = parseInt(value.split("-")[1])
+      updateData.anio = parseInt(value.split("-")[0])
     } else {
       updateData[key] = value
     }
@@ -177,7 +181,7 @@ export default function GastosPage() {
           <ExcelTable
             title="Detalle de Gastos (doble clic para editar)"
             columns={[
-              { key: "fecha", label: "Fecha", type: "date" },
+              { key: "fecha", label: "Fecha", type: "date", editable: true },
               { key: "tipo", label: "Tipo Gasto", editable: true },
               { key: "descripcion", label: "Descripcion", editable: true },
               { key: "monto", label: "Monto", type: "currency", editable: true },

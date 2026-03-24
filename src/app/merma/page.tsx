@@ -93,6 +93,20 @@ export default function MermaPage() {
     loadData()
   }
 
+  async function editarMerma(rowIdx: number, key: string, value: string) {
+    const item = merma[rowIdx]
+    const updateData: Record<string, unknown> = {}
+    if (key === "cantidad_perdida") {
+      const nueva = parseFloat(value) || 0
+      updateData.cantidad_perdida = nueva
+      updateData.costo_merma = Number((nueva * (Number(item.costo_unitario) || 0)).toFixed(2))
+    } else {
+      updateData[key] = value
+    }
+    await supabase.from("merma").update(updateData).eq("id", item.id)
+    loadData()
+  }
+
   async function eliminarMerma(idx: number) {
     const item = merma[idx]
     if (!confirm("Eliminar registro de merma?")) return
@@ -205,16 +219,17 @@ export default function MermaPage() {
             title="Registro de Merma"
             columns={[
               { key: "merma_id", label: "Merma ID", width: "80px" },
-              { key: "fecha", label: "Fecha", type: "date" },
+              { key: "fecha", label: "Fecha", type: "date", editable: true },
               { key: "ingrediente", label: "Ingrediente" },
-              { key: "cantidad_perdida", label: "Cantidad", type: "number" },
+              { key: "cantidad_perdida", label: "Cantidad", type: "number", editable: true },
               { key: "unidad", label: "Unidad" },
-              { key: "motivo", label: "Motivo" },
+              { key: "motivo", label: "Motivo", editable: true },
               { key: "costo_unitario", label: "C. Unit.", type: "currency" },
               { key: "costo_merma", label: "Costo Merma", type: "currency" },
-              { key: "responsable", label: "Responsable" },
+              { key: "responsable", label: "Responsable", editable: true },
             ]}
             data={merma}
+            onEdit={editarMerma}
             onDelete={eliminarMerma}
           />
         </div>
