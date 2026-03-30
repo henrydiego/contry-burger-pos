@@ -499,7 +499,20 @@ export default function POSPage() {
                 width: 80mm !important;
                 padding: 6mm !important;
                 font-size: 11px !important;
+                box-sizing: border-box !important;
+                overflow-wrap: break-word !important;
               }
+            }
+            /* Fix para html2canvas - evita cortes al guardar imagen */
+            #ticket-print {
+              max-width: 100%;
+              box-sizing: border-box;
+              overflow-wrap: break-word;
+              word-wrap: break-word;
+            }
+            #ticket-print * {
+              max-width: 100%;
+              box-sizing: border-box;
             }
           `}</style>
           <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full mx-4 overflow-hidden">

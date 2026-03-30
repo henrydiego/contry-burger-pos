@@ -401,7 +401,19 @@ export default function PedidosPage() {
               #recibo-pedido-print {
                 position: fixed !important; left: 0 !important; top: 0 !important;
                 width: 80mm !important; padding: 6mm !important; font-size: 11px !important;
+                box-sizing: border-box !important; overflow-wrap: break-word !important;
               }
+            }
+            /* Fix para html2canvas - evita cortes al guardar imagen */
+            #recibo-pedido-print {
+              max-width: 100%;
+              box-sizing: border-box;
+              overflow-wrap: break-word;
+              word-wrap: break-word;
+            }
+            #recibo-pedido-print * {
+              max-width: 100%;
+              box-sizing: border-box;
             }
           `}</style>
           <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full overflow-hidden">
