@@ -101,6 +101,10 @@ export default function MenuPublico() {
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [installDismissed, setInstallDismissed] = useState(false)
   const [isInstalled, setIsInstalled] = useState(false)
+  const [detalleProducto, setDetalleProducto] = useState<Producto | null>(null)
+  const [recetasDetalle, setRecetasDetalle] = useState<{ ingrediente_nombre: string; cantidad: number; unidad: string }[]>([])
+  const [loadingRecetas, setLoadingRecetas] = useState(false)
+  const [detalleCantidad, setDetalleCantidad] = useState(1)
   const [googleUser, setGoogleUser] = useState<{ name: string; email: string } | null>(null)
   const [googleLoading, setGoogleLoading] = useState(false)
   const [gpsLoading, setGpsLoading] = useState(false)
@@ -256,6 +260,39 @@ export default function MenuPublico() {
         return { ...item, cantidad: n, subtotal: n * item.precio_unitario }
       }).filter(Boolean)
     )
+  }
+
+  async function abrirDetalle(producto: Producto) {
+    setDetalleProducto(producto)
+    const enCarrito = carrito.find(c => c.producto_id === producto.id)
+    setDetalleCantidad(enCarrito ? enCarrito.cantidad : 1)
+    setRecetasDetalle([])
+    setLoadingRecetas(true)
+    const { data } = await supabase
+      .from("recetas")
+      .select("ingrediente_nombre, cantidad, unidad")
+      .eq("producto_id", producto.id)
+    setRecetasDetalle(data || [])
+    setLoadingRecetas(false)
+  }
+
+  function agregarDesdeDetalle() {
+    if (!detalleProducto || detalleProducto.agotado) return
+    setCarrito(prev => {
+      const existe = prev.find(i => i.producto_id === detalleProducto.id)
+      if (existe) {
+        return prev.map(i => i.producto_id === detalleProducto.id
+          ? { ...i, cantidad: detalleCantidad, subtotal: detalleCantidad * i.precio_unitario } : i)
+      }
+      return [...prev, {
+        producto_id: detalleProducto.id, nombre: detalleProducto.nombre,
+        cantidad: detalleCantidad, precio_unitario: detalleProducto.precio_venta,
+        subtotal: detalleCantidad * detalleProducto.precio_venta,
+      }]
+    })
+    setAddedId(detalleProducto.id)
+    setTimeout(() => setAddedId(null), 500)
+    setDetalleProducto(null)
   }
 
   const subtotalProductos = carrito.reduce((s, i) => s + i.subtotal, 0)
@@ -810,7 +847,7 @@ export default function MenuPublico() {
                           producto.agotado ? "opacity-50 border-gray-800/30" : "border-gray-800/50 hover:border-gray-600 hover:shadow-xl hover:shadow-black/30 hover:-translate-y-0.5"
                         } ${justAdded ? "ring-2 ring-red-500" : ""}`}>
                         {/* Image */}
-                        <div className="relative overflow-hidden">
+                        <div className="relative overflow-hidden cursor-pointer" onClick={() => abrirDetalle(producto)}>
                           {producto.imagen_url ? (
                             <img src={producto.imagen_url} alt={producto.nombre} className="w-full h-44 object-cover group-hover:scale-105 transition-transform duration-300" />
                           ) : (
@@ -836,7 +873,7 @@ export default function MenuPublico() {
                         </div>
                         {/* Info */}
                         <div className="p-4 flex flex-col flex-1">
-                          <h3 className="font-bold text-white text-sm leading-tight mb-1 line-clamp-2">{producto.nombre}</h3>
+                          <h3 className="font-bold text-white text-sm leading-tight mb-1 line-clamp-2 cursor-pointer hover:text-red-400 transition-colors" onClick={() => abrirDetalle(producto)}>{producto.nombre}</h3>
                           {producto.descripcion && (
                             <p className="text-gray-400 text-xs leading-snug mb-2 line-clamp-2">{producto.descripcion}</p>
                           )}
@@ -1048,7 +1085,7 @@ export default function MenuPublico() {
                     className={`bg-gray-900 border rounded-2xl overflow-hidden flex flex-col transition-all ${
                       producto.agotado ? "opacity-50 border-gray-800/30" : "border-gray-800/50 hover:border-gray-700"
                     } ${justAdded ? "ring-2 ring-red-500 scale-[1.02]" : ""}`}>
-                    <div className="relative">
+                    <div className="relative cursor-pointer" onClick={() => abrirDetalle(producto)}>
                       {producto.imagen_url ? (
                         <img src={producto.imagen_url} alt={producto.nombre} className="w-full h-36 object-cover" />
                       ) : (
@@ -1068,7 +1105,7 @@ export default function MenuPublico() {
                       )}
                     </div>
                     <div className="p-3 flex flex-col flex-1">
-                      <h3 className="font-semibold text-white text-sm leading-tight line-clamp-2 mb-1">{producto.nombre}</h3>
+                      <h3 className="font-semibold text-white text-sm leading-tight line-clamp-2 mb-1 cursor-pointer active:text-red-400" onClick={() => abrirDetalle(producto)}>{producto.nombre}</h3>
                       {producto.descripcion && (
                         <p className="text-gray-400 text-xs leading-snug mb-2 line-clamp-2">{producto.descripcion}</p>
                       )}
@@ -1316,6 +1353,114 @@ export default function MenuPublico() {
                   </div>
                 )}
               </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Modal Vista Detalle Producto */}
+      {detalleProducto && (
+        <div className="fixed inset-0 z-50 flex items-end lg:items-center justify-center">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm animate-fade-in" onClick={() => setDetalleProducto(null)} />
+          <div className="relative bg-gray-900 w-full lg:max-w-lg lg:rounded-2xl rounded-t-3xl max-h-[90vh] flex flex-col shadow-2xl animate-slide-up overflow-hidden">
+            {/* Handle (mobile) */}
+            <div className="flex justify-center pt-3 pb-1 shrink-0 lg:hidden">
+              <div className="w-10 h-1 bg-gray-700 rounded-full" />
+            </div>
+
+            {/* Scrollable content */}
+            <div className="overflow-y-auto flex-1">
+              {/* Image */}
+              {detalleProducto.imagen_url ? (
+                <div className="relative">
+                  <img src={detalleProducto.imagen_url} alt={detalleProducto.nombre} className="w-full h-56 lg:h-64 object-cover" />
+                  {detalleProducto.agotado && (
+                    <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                      <span className="bg-red-700 text-white text-sm font-bold px-4 py-1.5 rounded-full">Agotado</span>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="w-full h-44 lg:h-52 bg-gray-800 flex items-center justify-center text-7xl">
+                  {getCatIcon(detalleProducto.categoria)}
+                </div>
+              )}
+
+              {/* Close button */}
+              <button onClick={() => setDetalleProducto(null)}
+                className="absolute top-3 right-3 lg:top-4 lg:right-4 w-8 h-8 bg-gray-900/80 hover:bg-gray-800 rounded-full flex items-center justify-center text-gray-300 hover:text-white text-xl transition-colors backdrop-blur-sm">
+                ×
+              </button>
+
+              {/* Info */}
+              <div className="px-5 pt-4 pb-2 space-y-3">
+                {/* Category */}
+                <span className="inline-block bg-gray-800 text-gray-300 text-xs px-2.5 py-1 rounded-full font-medium">
+                  {getCatIcon(detalleProducto.categoria)} {detalleProducto.categoria}
+                </span>
+
+                {/* Name & Price */}
+                <div>
+                  <h2 className="text-white font-black text-xl lg:text-2xl leading-tight">{detalleProducto.nombre}</h2>
+                  <p className="text-red-500 font-black text-2xl lg:text-3xl mt-1">${detalleProducto.precio_venta.toFixed(2)}</p>
+                </div>
+
+                {/* Description */}
+                {detalleProducto.descripcion && (
+                  <div>
+                    <p className="text-gray-300 text-sm leading-relaxed">{detalleProducto.descripcion}</p>
+                  </div>
+                )}
+
+                {/* Ingredients */}
+                <div>
+                  <h3 className="text-gray-400 text-xs font-bold uppercase tracking-wide mb-2">Ingredientes</h3>
+                  {loadingRecetas ? (
+                    <div className="flex items-center gap-2 text-gray-500 text-sm py-2">
+                      <Spinner /> Cargando...
+                    </div>
+                  ) : recetasDetalle.length > 0 ? (
+                    <div className="flex flex-wrap gap-1.5">
+                      {recetasDetalle.map((r, i) => (
+                        <span key={i} className="bg-gray-800 border border-gray-700/50 text-gray-300 text-xs px-2.5 py-1 rounded-full">
+                          {r.ingrediente_nombre}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-gray-600 text-xs">Sin ingredientes registrados</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Footer: Quantity + Add to cart */}
+            {!detalleProducto.agotado && (
+              <div className="px-5 pb-6 pt-3 border-t border-gray-800 shrink-0 safe-area-pb space-y-3">
+                {/* Quantity selector */}
+                <div className="flex items-center justify-center gap-4">
+                  <button onClick={() => setDetalleCantidad(q => Math.max(1, q - 1))}
+                    className="w-10 h-10 bg-gray-800 hover:bg-gray-700 rounded-xl font-bold text-white flex items-center justify-center transition-colors text-xl">
+                    −
+                  </button>
+                  <span className="text-white font-black text-2xl w-10 text-center">{detalleCantidad}</span>
+                  <button onClick={() => setDetalleCantidad(q => q + 1)}
+                    className="w-10 h-10 bg-red-600 hover:bg-red-700 rounded-xl font-bold text-white flex items-center justify-center transition-colors text-xl">
+                    +
+                  </button>
+                </div>
+                {/* Add button */}
+                <button onClick={agregarDesdeDetalle}
+                  className="w-full bg-red-600 hover:bg-red-700 text-white py-3.5 rounded-2xl font-black text-base transition-all active:scale-95 shadow-lg shadow-red-900/30 flex items-center justify-center gap-2">
+                  Agregar al carrito · ${(detalleProducto.precio_venta * detalleCantidad).toFixed(2)}
+                </button>
+              </div>
+            )}
+
+            {detalleProducto.agotado && (
+              <div className="px-5 pb-6 pt-3 border-t border-gray-800 shrink-0 safe-area-pb">
+                <div className="bg-gray-800 text-gray-500 text-center py-3 rounded-2xl font-semibold">Agotado hoy</div>
+              </div>
             )}
           </div>
         </div>
