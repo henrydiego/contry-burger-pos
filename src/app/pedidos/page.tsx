@@ -415,6 +415,11 @@ export default function PedidosPage() {
               max-width: 100%;
               box-sizing: border-box;
             }
+            #recibo-pedido-print .break-words {
+              overflow-wrap: break-word !important;
+              word-wrap: break-word !important;
+              word-break: break-word !important;
+            }
           `}</style>
           <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full overflow-hidden">
             {/* Botones acción */}
@@ -482,11 +487,11 @@ export default function PedidosPage() {
                   <span className="w-16 text-right">TOTAL</span>
                 </div>
                 {(ticketPedido.items || []).map((item, i) => (
-                  <div key={i} className="flex text-xs py-0.5">
-                    <span className="flex-1 truncate">{item.nombre}</span>
-                    <span className="w-8 text-center">{item.cantidad}</span>
-                    <span className="w-14 text-right">${Number(item.precio_unitario).toFixed(2)}</span>
-                    <span className="w-16 text-right font-semibold">${Number(item.subtotal).toFixed(2)}</span>
+                  <div key={i} className="flex text-xs py-0.5 items-start">
+                    <span className="flex-1 break-words pr-1">{item.nombre}</span>
+                    <span className="w-8 text-center flex-shrink-0">{item.cantidad}</span>
+                    <span className="w-14 text-right flex-shrink-0">${Number(item.precio_unitario).toFixed(2)}</span>
+                    <span className="w-16 text-right font-semibold flex-shrink-0">${Number(item.subtotal).toFixed(2)}</span>
                   </div>
                 ))}
               </div>
