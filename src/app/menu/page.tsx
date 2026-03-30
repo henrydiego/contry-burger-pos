@@ -1412,14 +1412,10 @@ export default function MenuPublico() {
                   </div>
                 )}
 
-                {/* Ingredients */}
-                <div>
-                  <h3 className="text-gray-400 text-xs font-bold uppercase tracking-wide mb-2">Ingredientes</h3>
-                  {loadingRecetas ? (
-                    <div className="flex items-center gap-2 text-gray-500 text-sm py-2">
-                      <Spinner /> Cargando...
-                    </div>
-                  ) : recetasDetalle.length > 0 ? (
+                {/* Ingredients - solo si hay */}
+                {recetasDetalle.length > 0 && (
+                  <div>
+                    <h3 className="text-gray-400 text-xs font-bold uppercase tracking-wide mb-2">Ingredientes</h3>
                     <div className="flex flex-wrap gap-1.5">
                       {recetasDetalle.map((r, i) => (
                         <span key={i} className="bg-gray-800 border border-gray-700/50 text-gray-300 text-xs px-2.5 py-1 rounded-full">
@@ -1427,10 +1423,8 @@ export default function MenuPublico() {
                         </span>
                       ))}
                     </div>
-                  ) : (
-                    <p className="text-gray-600 text-xs">Sin ingredientes registrados</p>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
             </div>
 
