@@ -103,7 +103,6 @@ export default function MenuPublico() {
   const [isInstalled, setIsInstalled] = useState(false)
   const [detalleProducto, setDetalleProducto] = useState<Producto | null>(null)
   const [recetasDetalle, setRecetasDetalle] = useState<{ ingrediente_nombre: string; cantidad: number; unidad: string }[]>([])
-  const [loadingRecetas, setLoadingRecetas] = useState(false)
   const [detalleCantidad, setDetalleCantidad] = useState(1)
   const [googleUser, setGoogleUser] = useState<{ name: string; email: string } | null>(null)
   const [googleLoading, setGoogleLoading] = useState(false)
@@ -267,13 +266,11 @@ export default function MenuPublico() {
     const enCarrito = carrito.find(c => c.producto_id === producto.id)
     setDetalleCantidad(enCarrito ? enCarrito.cantidad : 1)
     setRecetasDetalle([])
-    setLoadingRecetas(true)
     const { data } = await supabase
       .from("recetas")
       .select("ingrediente_nombre, cantidad, unidad")
       .eq("producto_id", producto.id)
     setRecetasDetalle(data || [])
-    setLoadingRecetas(false)
   }
 
   function agregarDesdeDetalle() {
