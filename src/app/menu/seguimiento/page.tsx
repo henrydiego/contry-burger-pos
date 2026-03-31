@@ -3,6 +3,7 @@
 import { useEffect, useState, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import { supabase } from "@/lib/supabase"
+import ChatCliente from "@/components/ChatCliente"
 
 interface Pedido {
   id: number
@@ -14,6 +15,9 @@ interface Pedido {
   metodo_pago: string
   pago_verificado: boolean
   calificado: boolean
+  notas: string
+  fecha: string
+  hora: string
   items: { nombre: string; cantidad: number; subtotal: number }[]
 }
 
@@ -257,6 +261,11 @@ function SeguimientoContent() {
         <div className="text-center">
           <a href="/menu" className="text-sm text-red-600 underline">Hacer otro pedido</a>
         </div>
+
+        {/* Chat con el restaurante */}
+        {pedido && pedido.estado !== "cancelado" && pedido.estado !== "entregado" && (
+          <ChatCliente pedido={pedido} />
+        )}
       </div>
     </div>
   )

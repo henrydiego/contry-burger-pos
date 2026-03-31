@@ -228,6 +228,31 @@ INSERT INTO recetas (producto_id, ingrediente_id, producto_nombre, ingrediente_n
   ('P013', 'ING010', 'Combo 2', 'Aceite de cocina', 0.08, 'litros'),
   ('P013', 'ING012', 'Combo 2', 'Refresco lata', 1, 'unidad');
 
+-- =============================================
+-- TABLA: chat_mensajes (chat admin-cliente)
+-- =============================================
+CREATE TABLE IF NOT EXISTS chat_mensajes (
+  id SERIAL PRIMARY KEY,
+  pedido_id INTEGER REFERENCES pedidos(id) ON DELETE CASCADE,
+  order_id TEXT NOT NULL,
+  remitente TEXT NOT NULL CHECK (remitente IN ('admin', 'cliente')),
+  mensaje TEXT NOT NULL,
+  leido BOOLEAN DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Indices para performance
+CREATE INDEX IF NOT EXISTS idx_chat_pedido_id ON chat_mensajes(pedido_id);
+CREATE INDEX IF NOT EXISTS idx_chat_order_id ON chat_mensajes(order_id);
+CREATE INDEX IF NOT EXISTS idx_chat_created_at ON chat_mensajes(created_at);
+
+-- Enable RLS
+ALTER TABLE chat_mensajes ENABLE ROW LEVEL SECURITY;
+
+-- Politicas: todos pueden leer/escribir (ajustar para produccion si es necesario)
+DROP POLICY IF EXISTS "Allow all chat" ON chat_mensajes;
+CREATE POLICY "Allow all chat" ON chat_mensajes FOR ALL USING (true) WITH CHECK (true);
+
 -- SEED: Gastos ejemplo
 INSERT INTO gastos (fecha, tipo, descripcion, monto, mes, anio) VALUES
   ('2025-01-01', 'Alquiler', 'Renta del local enero', 800, 1, 2025),

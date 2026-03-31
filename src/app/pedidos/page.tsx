@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from "react"
 import { supabase } from "@/lib/supabase"
 import StatCard from "@/components/StatCard"
 import html2canvas from "html2canvas"
+import ChatPanel from "@/components/ChatPanel"
 
 interface PedidoItem {
   producto_id: string
@@ -51,6 +52,7 @@ export default function PedidosPage() {
   const [alertaTipo, setAlertaTipo] = useState<"normal" | "qr" | null>(null)
   const ultimoIdRef = useRef<number>(0)
   const alertaTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [chatPedido, setChatPedido] = useState<Pedido | null>(null)
 
   function sonarAlerta(esQr: boolean) {
     try {
@@ -343,6 +345,15 @@ export default function PedidosPage() {
                   >
                     🧾 Ver / Imprimir Recibo
                   </button>
+                  {/* Botón Chat */}
+                  {pedido.estado !== "cancelado" && pedido.estado !== "entregado" && (
+                    <button
+                      onClick={() => setChatPedido(pedido)}
+                      className="w-full bg-blue-100 hover:bg-blue-200 text-blue-700 py-1.5 rounded text-xs font-semibold mb-1 flex items-center justify-center gap-1"
+                    >
+                      💬 Chat con cliente
+                    </button>
+                  )}
                   {/* Verificar pago QR */}
                   {pedido.metodo_pago === "qr" && !pedido.pago_verificado && pedido.estado !== "cancelado" && (
                     <button
@@ -391,6 +402,15 @@ export default function PedidosPage() {
           })}
         </div>
       )}
+
+      {/* Chat Panel */}
+      {chatPedido && (
+        <ChatPanel
+          pedido={chatPedido}
+          onClose={() => setChatPedido(null)}
+        />
+      )}
+
       {/* Modal Recibo Pedido App */}
       {ticketPedido && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">

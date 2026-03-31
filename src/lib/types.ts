@@ -125,3 +125,13 @@ export interface PedidoItem {
   precio_unitario: number
   subtotal: number
 }
+
+export interface ChatMensaje {
+  id: number
+  pedido_id: number
+  order_id: string
+  remitente: 'admin' | 'cliente'
+  mensaje: string
+  leido: boolean
+  created_at: string
+}
