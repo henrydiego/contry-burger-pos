@@ -133,7 +133,7 @@ function MisPedidosContent() {
               <div className="px-3 pb-3 flex gap-2">
                 {(pedido.estado === "pendiente" || pedido.estado === "preparando" || pedido.estado === "listo") && (
                   <a
-                    href={`/menu/seguimiento?order=${pedido.order_id}`}
+                    href={`/menu/seguimiento?order=${encodeURIComponent(pedido.order_id)}`}
                     className="flex-1 text-center bg-blue-600 text-white py-2 rounded-lg text-sm font-semibold hover:bg-blue-700"
                   >
                     Ver seguimiento
