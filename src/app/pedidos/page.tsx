@@ -53,6 +53,26 @@ export default function PedidosPage() {
   const ultimoIdRef = useRef<number>(0)
   const alertaTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [chatPedido, setChatPedido] = useState<Pedido | null>(null)
+  const [chatNoLeidos, setChatNoLeidos] = useState<Record<number, number>>({})
+  const chatNoLeidosTotal = Object.values(chatNoLeidos).reduce((s, n) => s + n, 0)
+
+  function sonarAlertaChat() {
+    try {
+      const ctx = new AudioContext()
+      // 3 tonos ascendentes para mensaje de chat
+      ;[0, 0.15, 0.30].forEach((t, i) => {
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+        osc.connect(gain)
+        gain.connect(ctx.destination)
+        osc.frequency.setValueAtTime(800 + i * 200, ctx.currentTime + t)
+        gain.gain.setValueAtTime(0.4, ctx.currentTime + t)
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.12)
+        osc.start(ctx.currentTime + t)
+        osc.stop(ctx.currentTime + t + 0.12)
+      })
+    } catch { /* ignorar */ }
+  }
 
   function sonarAlerta(esQr: boolean) {
     try {
@@ -113,10 +133,46 @@ export default function PedidosPage() {
   useEffect(() => {
     fetchPedidos()
 
+    // Cargar no leidos del chat inicialmente
+    async function loadChatNoLeidos() {
+      const { data } = await supabase
+        .from("chat_mensajes")
+        .select("pedido_id")
+        .eq("remitente", "cliente")
+        .eq("leido", false)
+      if (data) {
+        const counts: Record<number, number> = {}
+        data.forEach((m: { pedido_id: number }) => {
+          counts[m.pedido_id] = (counts[m.pedido_id] || 0) + 1
+        })
+        setChatNoLeidos(counts)
+      }
+    }
+    loadChatNoLeidos()
+
     // Realtime para actualizaciones instantáneas
     const channel = supabase
       .channel("pedidos-realtime")
       .on("postgres_changes", { event: "*", schema: "public", table: "pedidos" }, fetchPedidos)
+      .subscribe()
+
+    // Realtime para mensajes de chat del cliente
+    const chatChannel = supabase
+      .channel("chat-admin-global")
+      .on("postgres_changes", {
+        event: "INSERT",
+        schema: "public",
+        table: "chat_mensajes",
+      }, (payload) => {
+        const msg = payload.new as { pedido_id: number; remitente: string }
+        if (msg.remitente === "cliente") {
+          setChatNoLeidos(prev => ({
+            ...prev,
+            [msg.pedido_id]: (prev[msg.pedido_id] || 0) + 1,
+          }))
+          sonarAlertaChat()
+        }
+      })
       .subscribe()
 
     // Polling cada 3s como respaldo garantizado
@@ -124,6 +180,7 @@ export default function PedidosPage() {
 
     return () => {
       supabase.removeChannel(channel)
+      supabase.removeChannel(chatChannel)
       clearInterval(interval)
       if (alertaTimerRef.current) clearTimeout(alertaTimerRef.current)
     }
@@ -189,7 +246,10 @@ export default function PedidosPage() {
   const pendientes = pedidosHoy.filter((p) => p.estado === "pendiente").length
   const preparando = pedidosHoy.filter((p) => p.estado === "preparando").length
   const listos = pedidosHoy.filter((p) => p.estado === "listo").length
-  const totalHoy = pedidosHoy.reduce((s, p) => s + (Number(p.total) || 0), 0)
+  // Solo contar como venta los pedidos entregados Y con pago verificado (QR debe estar confirmado)
+  const totalHoy = pedidosHoy
+    .filter((p) => p.estado === "entregado" && (p.metodo_pago !== "qr" || p.pago_verificado))
+    .reduce((s, p) => s + (Number(p.total) || 0), 0)
 
   async function guardarComoImagen(pedido: Pedido) {
     setGuardandoImg(true)
@@ -213,6 +273,24 @@ export default function PedidosPage() {
 
   return (
     <div className="space-y-4">
+      {chatNoLeidosTotal > 0 && !chatPedido && (
+        <div className="fixed bottom-4 right-4 z-50 bg-blue-600 text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-bounce cursor-pointer"
+          onClick={() => {
+            const pedidoId = Number(Object.entries(chatNoLeidos).find(([, v]) => v > 0)?.[0])
+            const p = pedidos.find(p => p.id === pedidoId)
+            if (p) {
+              setChatPedido(p)
+              setChatNoLeidos(prev => ({ ...prev, [pedidoId]: 0 }))
+            }
+          }}
+        >
+          <span className="text-2xl">💬</span>
+          <div>
+            <p className="font-bold text-sm">{chatNoLeidosTotal} mensaje{chatNoLeidosTotal > 1 ? "s" : ""} nuevo{chatNoLeidosTotal > 1 ? "s" : ""}</p>
+            <p className="text-blue-200 text-xs">Toca para responder</p>
+          </div>
+        </div>
+      )}
       {alertaTipo === "qr" && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-orange-500 text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-bounce">
           <span className="text-2xl">💳</span>
@@ -348,10 +426,22 @@ export default function PedidosPage() {
                   {/* Botón Chat */}
                   {pedido.estado !== "cancelado" && pedido.estado !== "entregado" && (
                     <button
-                      onClick={() => setChatPedido(pedido)}
-                      className="w-full bg-blue-100 hover:bg-blue-200 text-blue-700 py-1.5 rounded text-xs font-semibold mb-1 flex items-center justify-center gap-1"
+                      onClick={() => {
+                        setChatPedido(pedido)
+                        setChatNoLeidos(prev => ({ ...prev, [pedido.id]: 0 }))
+                      }}
+                      className={`w-full py-1.5 rounded text-xs font-semibold mb-1 flex items-center justify-center gap-1 relative ${
+                        chatNoLeidos[pedido.id] > 0
+                          ? "bg-red-100 hover:bg-red-200 text-red-700 animate-pulse"
+                          : "bg-blue-100 hover:bg-blue-200 text-blue-700"
+                      }`}
                     >
                       💬 Chat con cliente
+                      {chatNoLeidos[pedido.id] > 0 && (
+                        <span className="bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                          {chatNoLeidos[pedido.id]}
+                        </span>
+                      )}
                     </button>
                   )}
                   {/* Verificar pago QR */}
@@ -364,29 +454,47 @@ export default function PedidosPage() {
                     </button>
                   )}
                   {pedido.estado === "pendiente" && (
-                    <button
-                      onClick={() => cambiarEstado(pedido.id, "preparando")}
-                      className="flex-1 bg-blue-600 text-white py-2 rounded text-sm font-semibold hover:bg-blue-700"
-                    >
-                      Preparar
-                    </button>
+                    esQrPendiente ? (
+                      <div className="flex-1 bg-orange-100 border border-orange-300 text-orange-700 py-2 rounded text-sm font-semibold text-center">
+                        ⚠️ Verifica el pago QR antes de preparar
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => cambiarEstado(pedido.id, "preparando")}
+                        className="flex-1 bg-blue-600 text-white py-2 rounded text-sm font-semibold hover:bg-blue-700"
+                      >
+                        Preparar
+                      </button>
+                    )
                   )}
                   {pedido.estado === "preparando" && (
-                    <button
-                      onClick={() => cambiarEstado(pedido.id, "listo")}
-                      className="flex-1 bg-green-600 text-white py-2 rounded text-sm font-semibold hover:bg-green-700"
-                    >
-                      Marcar Listo
-                    </button>
+                    esQrPendiente ? (
+                      <div className="flex-1 bg-orange-100 border border-orange-300 text-orange-700 py-2 rounded text-sm font-semibold text-center">
+                        ⚠️ Verifica el pago QR antes de continuar
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => cambiarEstado(pedido.id, "listo")}
+                        className="flex-1 bg-green-600 text-white py-2 rounded text-sm font-semibold hover:bg-green-700"
+                      >
+                        Marcar Listo
+                      </button>
+                    )
                   )}
                   {pedido.estado === "listo" && (
-                    <button
-                      onClick={() => entregarYRegistrar(pedido)}
-                      disabled={procesando.has(pedido.id)}
-                      className="flex-1 bg-green-700 text-white py-2 rounded text-sm font-semibold hover:bg-green-800 disabled:opacity-60 disabled:cursor-not-allowed"
-                    >
-                      {procesando.has(pedido.id) ? "Procesando..." : "Entregar y Registrar Venta"}
-                    </button>
+                    esQrPendiente ? (
+                      <div className="flex-1 bg-orange-100 border border-orange-300 text-orange-700 py-2 rounded text-sm font-semibold text-center">
+                        ⚠️ Verifica el pago QR antes de entregar
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => entregarYRegistrar(pedido)}
+                        disabled={procesando.has(pedido.id)}
+                        className="flex-1 bg-green-700 text-white py-2 rounded text-sm font-semibold hover:bg-green-800 disabled:opacity-60 disabled:cursor-not-allowed"
+                      >
+                        {procesando.has(pedido.id) ? "Procesando..." : "Entregar y Registrar Venta"}
+                      </button>
+                    )
                   )}
                   {(pedido.estado === "pendiente" || pedido.estado === "preparando") && (
                     <button

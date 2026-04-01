@@ -24,19 +24,20 @@ export function useChat({ pedidoId, orderId, rol, onNuevoMensaje }: UseChatOptio
   const reproducirSonido = useCallback(() => {
     try {
       const ctx = new (window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext)()
-      // 2 pitidos suaves para mensaje nuevo
-      const tiempos: number[] = [0, 0.12]
-      tiempos.forEach((t) => {
+      // 3 tonos ascendentes fuertes para mensaje nuevo
+      ;[0, 0.15, 0.30].forEach((t, i) => {
         const osc = ctx.createOscillator()
         const gain = ctx.createGain()
         osc.connect(gain)
         gain.connect(ctx.destination)
-        osc.frequency.setValueAtTime(1000, ctx.currentTime + t)
-        gain.gain.setValueAtTime(0.2, ctx.currentTime + t)
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.1)
+        osc.frequency.setValueAtTime(700 + i * 250, ctx.currentTime + t)
+        gain.gain.setValueAtTime(0.45, ctx.currentTime + t)
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.13)
         osc.start(ctx.currentTime + t)
-        osc.stop(ctx.currentTime + t + 0.1)
+        osc.stop(ctx.currentTime + t + 0.13)
       })
+      // Vibrar en moviles
+      if (navigator.vibrate) navigator.vibrate([200, 100, 200])
     } catch {
       // Ignorar si no soporta audio
     }
@@ -89,18 +90,26 @@ export function useChat({ pedidoId, orderId, rol, onNuevoMensaje }: UseChatOptio
 
     try {
       console.log(`[Chat ${rol}] Enviando mensaje:`, { pedidoId, orderId, remitente: rol, mensaje: mensaje.trim() })
-      const { error } = await supabase.from("chat_mensajes").insert({
+      const { data, error } = await supabase.from("chat_mensajes").insert({
         pedido_id: pedidoId,
         order_id: orderId,
         remitente: rol,
         mensaje: mensaje.trim(),
         leido: false,
-      })
+      }).select().single()
 
       if (error) {
         console.error(`[Chat ${rol}] Error al enviar:`, error)
         setEnviando(false)
         return false
+      }
+
+      // Optimistic update: agregar mensaje al estado local inmediatamente
+      if (data) {
+        setMensajes((prev) => {
+          if (prev.some((m) => m.id === data.id)) return prev
+          return [...prev, data as ChatMensaje]
+        })
       }
 
       console.log(`[Chat ${rol}] Mensaje enviado exitosamente`)

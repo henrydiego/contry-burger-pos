@@ -60,7 +60,7 @@ export default function Dashboard() {
         supabase.from("ventas").select("*").gte("fecha", hace7dias),
         supabase.from("gastos").select("*"),
         supabase.from("inventario").select("*"),
-        supabase.from("pedidos").select("total, metodo_pago, fecha").eq("fecha", hoy).eq("estado", "entregado"),
+        supabase.from("pedidos").select("total, metodo_pago, pago_verificado, fecha").eq("fecha", hoy).eq("estado", "entregado"),
       ])
 
       const ventas = ventasRes.data || []
@@ -72,8 +72,10 @@ export default function Dashboard() {
       const ventasHoyArr = ventas.filter((v) => v.fecha === hoy)
       const ventasPosHoy = ventasHoyArr.reduce((s: number, v: Record<string, unknown>) => s + (Number(v.total) || 0), 0)
 
-      // App sales (from pedidos table — online customers)
-      const ventasAppHoy = pedidosHoy.reduce((s: number, p: Record<string, unknown>) => s + (Number(p.total) || 0), 0)
+      // App sales (from pedidos table — online customers) — solo pago verificado
+      const ventasAppHoy = pedidosHoy
+        .filter((p: Record<string, unknown>) => p.metodo_pago !== "qr" || p.pago_verificado === true)
+        .reduce((s: number, p: Record<string, unknown>) => s + (Number(p.total) || 0), 0)
 
       const ventasMesArr = ventas.filter((v) => String(v.fecha).startsWith(mesActual))
       const ventasMes = ventasMesArr.reduce((s: number, v: Record<string, unknown>) => s + (Number(v.total) || 0), 0)
