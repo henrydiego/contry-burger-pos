@@ -489,7 +489,6 @@ export default function POSPage() {
             className="w-full border rounded px-3 py-2 text-sm"
           >
             <option value="efectivo">Efectivo</option>
-            <option value="tarjeta">Tarjeta</option>
             <option value="qr">QR / Transferencia</option>
           </select>
 
