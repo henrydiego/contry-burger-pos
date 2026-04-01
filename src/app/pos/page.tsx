@@ -579,9 +579,16 @@ export default function POSPage() {
                 left: 0 !important; top: 0 !important;
                 width: 80mm !important;
                 padding: 6mm !important;
-                font-size: 11px !important;
+                font-size: 12px !important;
+                line-height: 1.4 !important;
                 box-sizing: border-box !important;
                 overflow-wrap: break-word !important;
+                overflow: visible !important;
+              }
+              #ticket-print span {
+                overflow: visible !important;
+                text-overflow: unset !important;
+                white-space: normal !important;
               }
             }
             /* Fix para html2canvas - evita cortes al guardar imagen */
@@ -631,7 +638,7 @@ export default function POSPage() {
             </div>
 
             {/* Ticket content — printable area */}
-            <div id="ticket-print" className="p-5 font-mono text-sm">
+            <div id="ticket-print" className="p-6 font-mono text-sm leading-relaxed">
               {/* Header */}
               <div className="text-center mb-4 border-b-2 border-dashed border-gray-400 pb-3">
                 <p className="text-xl font-black tracking-wider">CONTRY BURGER</p>
@@ -651,18 +658,18 @@ export default function POSPage() {
 
               {/* Items */}
               <div className="border-b border-dashed border-gray-400 pb-3 mb-3">
-                <div className="flex text-xs text-gray-500 mb-1">
+                <div className="flex text-sm text-gray-500 mb-1">
                   <span className="flex-1">PRODUCTO</span>
                   <span className="w-8 text-center">CT</span>
-                  <span className="w-14 text-right">P.U.</span>
-                  <span className="w-16 text-right">TOTAL</span>
+                  <span className="w-16 text-right">P.U.</span>
+                  <span className="w-18 text-right">TOTAL</span>
                 </div>
                 {ticketData.items.map((item, i) => (
-                  <div key={i} className="flex text-xs py-0.5">
-                    <span className="flex-1 truncate">{item.nombre}</span>
-                    <span className="w-8 text-center">{item.cantidad}</span>
-                    <span className="w-14 text-right">${item.precio_unitario.toFixed(2)}</span>
-                    <span className="w-16 text-right font-semibold">${item.subtotal.toFixed(2)}</span>
+                  <div key={i} className="flex text-sm py-1 leading-snug">
+                    <span className="flex-1 break-words min-w-0">{item.nombre}</span>
+                    <span className="w-8 text-center shrink-0">{item.cantidad}</span>
+                    <span className="w-16 text-right shrink-0">${item.precio_unitario.toFixed(2)}</span>
+                    <span className="w-18 text-right font-semibold shrink-0">${item.subtotal.toFixed(2)}</span>
                   </div>
                 ))}
               </div>
