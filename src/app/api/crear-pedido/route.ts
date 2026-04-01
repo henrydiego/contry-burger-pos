@@ -36,6 +36,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'El carrito está vacío.' }, { status: 400 })
     if (!cliente_nombre?.trim() || !cliente_telefono?.trim())
       return NextResponse.json({ error: 'Nombre y teléfono son requeridos.' }, { status: 400 })
+    if (metodo_pago && !['efectivo', 'qr', 'tarjeta'].includes(metodo_pago))
+      return NextResponse.json({ error: 'Método de pago inválido.' }, { status: 400 })
 
     const supabase = getServiceClient()
 
@@ -56,7 +58,7 @@ export async function POST(req: NextRequest) {
       if (!producto) return NextResponse.json({ error: `Producto no encontrado: ${item.producto_id}` }, { status: 400 })
       if (!producto.activo) return NextResponse.json({ error: `Producto no disponible: ${producto.nombre}` }, { status: 400 })
       if (producto.agotado) return NextResponse.json({ error: `Producto agotado: ${producto.nombre}` }, { status: 400 })
-      const cantidad = Math.max(1, Math.floor(Number(item.cantidad) || 1))
+      const cantidad = Math.max(1, Math.min(99, Math.floor(Number(item.cantidad) || 1)))
       const precio = Number(producto.precio_venta)
       const itemSubtotal = precio * cantidad
       subtotal += itemSubtotal

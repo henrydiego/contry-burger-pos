@@ -144,13 +144,19 @@ function SeguimientoContent() {
   async function enviarCalificacion() {
     if (!rating || !pedido) return
     setCalificando(true)
-    await supabase.from("resenas").insert({
-      pedido_id: pedido.id, order_id: orderId,
-      rating, comentario: comentario.trim() || null, cliente_nombre: pedido.cliente_nombre,
-    })
-    await supabase.from("pedidos").update({ calificado: true }).eq("id", pedido.id)
-    setCalificado(true)
-    setCalificando(false)
+    try {
+      const { error } = await supabase.from("resenas").insert({
+        pedido_id: pedido.id, order_id: orderId,
+        rating, comentario: comentario.trim() || null, cliente_nombre: pedido.cliente_nombre,
+      })
+      if (error) throw error
+      await supabase.from("pedidos").update({ calificado: true }).eq("id", pedido.id)
+      setCalificado(true)
+    } catch {
+      alert("No se pudo enviar la calificación. Intenta de nuevo.")
+    } finally {
+      setCalificando(false)
+    }
   }
 
   async function pedirNotificaciones() { await Notification.requestPermission() }

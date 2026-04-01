@@ -38,6 +38,8 @@ export function useChat({ pedidoId, orderId, rol, onNuevoMensaje }: UseChatOptio
       })
       // Vibrar en moviles
       if (navigator.vibrate) navigator.vibrate([200, 100, 200])
+      // Cerrar AudioContext después de que terminen los sonidos
+      setTimeout(() => ctx.close().catch(() => {}), 600)
     } catch {
       // Ignorar si no soporta audio
     }

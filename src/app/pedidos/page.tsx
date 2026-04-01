@@ -71,6 +71,7 @@ export default function PedidosPage() {
         osc.start(ctx.currentTime + t)
         osc.stop(ctx.currentTime + t + 0.12)
       })
+      setTimeout(() => ctx.close().catch(() => {}), 600)
     } catch { /* ignorar */ }
   }
 
@@ -103,6 +104,7 @@ export default function PedidosPage() {
         osc.start(ctx.currentTime)
         osc.stop(ctx.currentTime + 0.4)
       }
+      setTimeout(() => ctx.close().catch(() => {}), 600)
     } catch { /* ignorar si no soporta */ }
   }
 
