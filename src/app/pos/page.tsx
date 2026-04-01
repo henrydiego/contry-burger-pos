@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react"
 import { supabase } from "@/lib/supabase"
 import { Producto, Receta, Inventario } from "@/lib/types"
 import html2canvas from "html2canvas"
+import { type Role } from "@/lib/roles"
 
 interface CartItem {
   producto_id: string
@@ -31,6 +32,8 @@ interface TicketData {
   metodoPago: string
   fecha: string
   hora: string
+  montoRecibido?: number
+  cambio?: number
 }
 
 export default function POSPage() {
@@ -40,6 +43,7 @@ export default function POSPage() {
   const [carrito, setCarrito] = useState<CartItem[]>([])
   const [metodoPago, setMetodoPago] = useState("efectivo")
   const [cajero, setCajero] = useState("")
+  const [userRole, setUserRole] = useState<Role | undefined>(undefined)
   const [busqueda, setBusqueda] = useState("")
   const [categoriaFiltro, setCategoriaFiltro] = useState("Todos")
   const [loading, setLoading] = useState(true)
@@ -48,6 +52,7 @@ export default function POSPage() {
   const [alertasStock, setAlertasStock] = useState<StockAlert[]>([])
   const [ticketData, setTicketData] = useState<TicketData | null>(null)
   const [guardandoImg, setGuardandoImg] = useState(false)
+  const [montoRecibido, setMontoRecibido] = useState("")
 
   const generateOrderId = useCallback(async () => {
     const { data } = await supabase
@@ -78,6 +83,17 @@ export default function POSPage() {
 
   useEffect(() => {
     loadData()
+    // Auto-fill cajero name from session
+    supabase.auth.getUser().then(({ data }) => {
+      const role = data.user?.app_metadata?.role as Role | undefined
+      setUserRole(role)
+      if (role === 'cajero') {
+        // Use email prefix as cashier name
+        const email = data.user?.email || ''
+        const name = data.user?.user_metadata?.full_name || email.split('@')[0]
+        setCajero(name)
+      }
+    })
   }, [])
 
   async function loadData() {
@@ -160,6 +176,8 @@ export default function POSPage() {
   const total = carrito.reduce((s, item) => s + item.subtotal, 0)
   const costoTotal = carrito.reduce((s, item) => s + item.costo_total, 0)
   const utilidad = total - costoTotal
+  const montoNum = parseFloat(montoRecibido) || 0
+  const cambio = montoNum - total
 
   async function procesarVenta() {
     if (carrito.length === 0) return
@@ -283,6 +301,7 @@ export default function POSPage() {
       }
 
       // Show printable ticket
+      const montoEfectivo = metodoPago === "efectivo" && montoNum > 0 ? montoNum : undefined
       setTicketData({
         orderId,
         cajero: cajero.trim(),
@@ -291,6 +310,8 @@ export default function POSPage() {
         metodoPago,
         fecha: hoy,
         hora,
+        montoRecibido: montoEfectivo,
+        cambio: montoEfectivo ? montoEfectivo - total : undefined,
       })
       setCarrito([])
       const newId = await generateOrderId()
@@ -384,13 +405,19 @@ export default function POSPage() {
         </div>
 
         <div className="p-3">
-          <input
-            type="text"
-            placeholder="Nombre del cajero..."
-            value={cajero}
-            onChange={(e) => setCajero(e.target.value)}
-            className="w-full border rounded px-3 py-2 text-sm mb-2"
-          />
+          {userRole === 'cajero' ? (
+            <div className="bg-gray-100 rounded px-3 py-2 text-sm text-gray-600 mb-2">
+              Cajero: <strong>{cajero}</strong>
+            </div>
+          ) : (
+            <input
+              type="text"
+              placeholder="Nombre del cajero..."
+              value={cajero}
+              onChange={(e) => setCajero(e.target.value)}
+              className="w-full border rounded px-3 py-2 text-sm mb-2"
+            />
+          )}
         </div>
 
         <div className="flex-1 overflow-auto px-3 space-y-2">
@@ -447,7 +474,7 @@ export default function POSPage() {
             <span className="text-[var(--primary)]">${total.toFixed(2)}</span>
           </div>
 
-          {carrito.length > 0 && (
+          {carrito.length > 0 && userRole !== 'cajero' && (
             <div className="flex justify-between text-xs text-gray-500 border-t pt-1">
               <span>Costo: ${costoTotal.toFixed(2)}</span>
               <span className={utilidad >= 0 ? "text-green-600 font-semibold" : "text-red-600 font-semibold"}>
@@ -466,8 +493,37 @@ export default function POSPage() {
             <option value="qr">QR / Transferencia</option>
           </select>
 
+          {metodoPago === "efectivo" && carrito.length > 0 && (
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-gray-500 whitespace-nowrap">Recibido:</label>
+                <div className="relative flex-1">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
+                  <input
+                    type="number"
+                    placeholder="0.00"
+                    value={montoRecibido}
+                    onChange={(e) => setMontoRecibido(e.target.value)}
+                    className="w-full border rounded px-3 pl-7 py-2 text-sm"
+                    min="0"
+                    step="0.50"
+                  />
+                </div>
+              </div>
+              {montoNum > 0 && (
+                <div className={`flex justify-between text-sm font-bold px-1 ${cambio >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  <span>Cambio:</span>
+                  <span>${cambio >= 0 ? cambio.toFixed(2) : `Faltan $${Math.abs(cambio).toFixed(2)}`}</span>
+                </div>
+              )}
+            </div>
+          )}
+
           <button
-            onClick={procesarVenta}
+            onClick={() => {
+              procesarVenta()
+              setMontoRecibido("")
+            }}
             disabled={carrito.length === 0 || procesando}
             className="w-full bg-[var(--primary)] text-white py-3 rounded-lg font-bold text-lg hover:bg-[var(--primary-dark)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
@@ -596,6 +652,18 @@ export default function POSPage() {
                   <span>Método de pago:</span>
                   <span className="font-semibold uppercase">{ticketData.metodoPago}</span>
                 </div>
+                {ticketData.montoRecibido != null && (
+                  <>
+                    <div className="flex justify-between text-xs text-gray-600">
+                      <span>Recibido:</span>
+                      <span className="font-semibold">${ticketData.montoRecibido.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-xs font-bold text-green-700">
+                      <span>Cambio:</span>
+                      <span>${(ticketData.cambio ?? 0).toFixed(2)}</span>
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Footer */}
