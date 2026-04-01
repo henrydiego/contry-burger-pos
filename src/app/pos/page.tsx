@@ -404,17 +404,17 @@ export default function POSPage() {
             <button
               key={producto.id}
               onClick={() => agregarAlCarrito(producto)}
-              className="bg-white border-2 border-gray-200 rounded-lg overflow-hidden hover:border-[var(--primary)] hover:shadow-md transition-all text-left flex flex-col"
+              className="bg-white border-2 border-gray-200 rounded-lg p-3 hover:border-[var(--primary)] hover:shadow-md transition-all text-left flex items-center gap-3"
             >
               {producto.imagen_url ? (
-                <img src={producto.imagen_url} alt={producto.nombre} className="w-full h-28 object-cover" />
+                <img src={producto.imagen_url} alt={producto.nombre} className="w-12 h-12 rounded-lg object-cover shrink-0" />
               ) : (
-                <div className="w-full h-28 bg-gray-100 flex items-center justify-center text-3xl">🍔</div>
+                <div className="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center text-xl shrink-0">🍔</div>
               )}
-              <div className="p-2 flex flex-col flex-1">
+              <div className="flex-1 min-w-0">
                 <p className="font-semibold text-sm truncate">{producto.nombre}</p>
                 <p className="text-xs text-gray-500">{producto.categoria}</p>
-                <p className="text-lg font-bold text-[var(--primary)] mt-auto">
+                <p className="text-base font-bold text-[var(--primary)]">
                   ${producto.precio_venta.toFixed(2)}
                 </p>
               </div>
