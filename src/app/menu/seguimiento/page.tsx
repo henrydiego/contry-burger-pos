@@ -39,7 +39,10 @@ function getStepIndex(estado: string, pagoVerificado: boolean, esQr: boolean): n
 
 function SeguimientoContent() {
   const searchParams = useSearchParams()
-  const orderId = decodeURIComponent(searchParams.get("order") ?? "")
+  const rawOrderId = searchParams.get("order")
+  const orderId = rawOrderId ? decodeURIComponent(rawOrderId).replace("#", "").trim() : ""
+
+  console.log("[Seguimiento] orderId raw:", rawOrderId, "parsed:", orderId)
   const [pedido, setPedido] = useState<Pedido | null>(null)
   const [loading, setLoading] = useState(true)
   const [alerted, setAlerted] = useState(false)
@@ -66,6 +69,7 @@ function SeguimientoContent() {
     const interval = setInterval(loadPedido, 8000)
 
     return () => { supabase.removeChannel(channel); clearInterval(interval) }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderId])
 
   useEffect(() => {
@@ -79,10 +83,24 @@ function SeguimientoContent() {
   }, [pedido?.estado, alerted, orderId])
 
   async function loadPedido() {
-    const { data } = await supabase.from("pedidos").select("*").eq("order_id", orderId).single()
-    setPedido(data as Pedido)
-    setCalificado(data?.calificado || false)
-    setLoading(false)
+    try {
+      console.log("[Seguimiento] Cargando pedido:", orderId)
+      const { data, error } = await supabase.from("pedidos").select("*").eq("order_id", orderId).single()
+
+      if (error) {
+        console.error("[Seguimiento] Error cargando pedido:", error)
+        setPedido(null)
+      } else {
+        console.log("[Seguimiento] Pedido cargado:", data)
+        setPedido(data as Pedido)
+        setCalificado(data?.calificado || false)
+      }
+    } catch (err) {
+      console.error("[Seguimiento] Excepción:", err)
+      setPedido(null)
+    } finally {
+      setLoading(false)
+    }
   }
 
   async function loadConfig() {
@@ -105,9 +123,9 @@ function SeguimientoContent() {
 
   async function pedirNotificaciones() { await Notification.requestPermission() }
 
-  if (!orderId) return <div className="text-center py-20 text-gray-400"><p className="text-4xl mb-3">🔍</p><p>Pedido no encontrado</p></div>
+  if (!orderId) return <div className="text-center py-20 text-gray-400"><p className="text-4xl mb-3">🔍</p><p>Pedido no encontrado</p><p className="text-xs mt-2 text-gray-500">URL: {typeof window !== 'undefined' ? window.location.href : ''}</p></div>
   if (loading) return <div className="flex items-center justify-center min-h-screen"><p className="text-gray-400">Cargando...</p></div>
-  if (!pedido) return <div className="text-center py-20 text-gray-400"><p className="text-4xl mb-3">❌</p><p>Pedido no encontrado</p></div>
+  if (!pedido) return <div className="text-center py-20 text-gray-400"><p className="text-4xl mb-3">❌</p><p>Pedido no encontrado</p><p className="text-sm mt-2">ID: <span className="font-mono bg-gray-200 px-2 py-1 rounded">{orderId}</span></p><p className="text-xs text-gray-500 mt-4">Verifica que el enlace sea correcto</p></div>
 
   const esQr = pedido.metodo_pago === "qr"
   const stepIndex = getStepIndex(pedido.estado, pedido.pago_verificado, esQr)

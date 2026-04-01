@@ -253,6 +253,47 @@ ALTER TABLE chat_mensajes ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Allow all chat" ON chat_mensajes;
 CREATE POLICY "Allow all chat" ON chat_mensajes FOR ALL USING (true) WITH CHECK (true);
 
+-- =============================================
+-- HABILITAR REALTIME PARA CHAT
+-- =============================================
+-- Agregar tabla a la publicacion de realtime (para recibir cambios en tiempo real)
+BEGIN;
+  -- Verificar si la tabla ya esta en la publicacion
+  DO $$
+  BEGIN
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_publication_tables
+      WHERE pubname = 'supabase_realtime'
+      AND tablename = 'chat_mensajes'
+    ) THEN
+      ALTER PUBLICATION supabase_realtime ADD TABLE chat_mensajes;
+    END IF;
+  END $$;
+COMMIT;
+
+-- Asegurar que replica identity este configurado (necesario para DELETE/UPDATE)
+ALTER TABLE chat_mensajes REPLICA IDENTITY FULL;
+
+-- =============================================
+-- HABILITAR REALTIME PARA PEDIDOS
+-- =============================================
+-- Para actualizaciones de estado del pedido en tiempo real
+BEGIN;
+  DO $$
+  BEGIN
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_publication_tables
+      WHERE pubname = 'supabase_realtime'
+      AND tablename = 'pedidos'
+    ) THEN
+      ALTER PUBLICATION supabase_realtime ADD TABLE pedidos;
+    END IF;
+  END $$;
+COMMIT;
+
+-- Asegurar replica identity para pedidos
+ALTER TABLE pedidos REPLICA IDENTITY FULL;
+
 -- SEED: Gastos ejemplo
 INSERT INTO gastos (fecha, tipo, descripcion, monto, mes, anio) VALUES
   ('2025-01-01', 'Alquiler', 'Renta del local enero', 800, 1, 2025),

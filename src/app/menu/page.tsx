@@ -112,7 +112,7 @@ export default function MenuPublico() {
   const [cuponError, setCuponError] = useState("")
   const [validandoCupon, setValidandoCupon] = useState(false)
   const [cliente, setCliente] = useState({
-    nombre: "", telefono: "", notas: "", metodo_pago: "efectivo",
+    nombre: "", telefono: "", notas: "", metodo_pago: "qr",
     direccion: "", latitud: null as number | null, longitud: null as number | null,
     tipo_entrega: "local" as "local" | "mesa" | "delivery",
     numero_mesa: "", hora_recojo: "Lo antes posible",
@@ -187,7 +187,7 @@ export default function MenuPublico() {
   async function logoutCliente() {
     await supabase.auth.signOut()
     setGoogleUser(null)
-    setCliente({ nombre: "", telefono: "", notas: "", metodo_pago: "efectivo", direccion: "", latitud: null, longitud: null, tipo_entrega: "local", numero_mesa: "", hora_recojo: "Lo antes posible" })
+    setCliente({ nombre: "", telefono: "", notas: "", metodo_pago: "qr", direccion: "", latitud: null, longitud: null, tipo_entrega: "local", numero_mesa: "", hora_recojo: "Lo antes posible" })
   }
 
   async function loginConGoogle() {
@@ -448,7 +448,7 @@ export default function MenuPublico() {
                   className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-3 text-sm resize-none focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500/50 placeholder:text-gray-600 transition-colors" rows={2} />
                 <select value={cliente.metodo_pago} onChange={e => setCliente({ ...cliente, metodo_pago: e.target.value })}
                   className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-red-500 transition-colors">
-                  <option value="efectivo">💵 Pago en Efectivo</option>
+                  {/* <option value="efectivo">💵 Pago en Efectivo</option> */}
                   <option value="qr">📱 Pago QR / Transferencia</option>
                 </select>
               </div>
@@ -457,13 +457,12 @@ export default function MenuPublico() {
               <div className="bg-gray-900 rounded-2xl p-4 space-y-3">
                 <h3 className="font-semibold text-sm text-gray-300">¿Cómo quieres tu pedido?</h3>
                 <div className="grid grid-cols-3 gap-2">
-                  {([
-                    { id: "local", icon: "🏪", label: "Recoger en local" },
-                    { id: "mesa", icon: "🪑", label: "Para la mesa" },
-                    { id: "delivery", icon: "🚗", label: "Delivery" },
-                  ] as const).map(({ id, icon, label }) => (
-                    <button key={id} onClick={() => setCliente(c => ({ ...c, tipo_entrega: id }))}
-                      className={`flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl border transition-all active:scale-95 text-center ${
+                                      {([
+                                        { id: "local", icon: "🏪", label: "Recoger en local" },
+                                        { id: "mesa", icon: "🪑", label: "Para la mesa" },
+                                        { id: "delivery", icon: "🚗", label: "Delivery" },
+                                      ] as const).map(({ id, icon, label }) => (
+                                        <button key={id} onClick={() => setCliente(c => ({ ...c, tipo_entrega: id, metodo_pago: "qr" }))}                      className={`flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl border transition-all active:scale-95 text-center ${
                         cliente.tipo_entrega === id
                           ? "bg-red-600/20 border-red-500 text-white"
                           : "bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-500"
@@ -565,7 +564,7 @@ export default function MenuPublico() {
                   ["Nombre", cliente.nombre],
                   ["Teléfono", cliente.telefono],
                   ...(cliente.notas ? [["Notas", cliente.notas]] : []),
-                  ["Pago", cliente.metodo_pago === "qr" ? "QR / Transferencia" : "Efectivo"],
+                  ["Pago", "QR / Transferencia"],
                 ].map(([label, value]) => (
                   <div key={label} className="flex justify-between">
                     <span className="text-gray-500">{label}</span>

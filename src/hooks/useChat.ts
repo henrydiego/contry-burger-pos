@@ -80,32 +80,50 @@ export function useChat({ pedidoId, orderId, rol, onNuevoMensaje }: UseChatOptio
 
   // Enviar mensaje
   const enviarMensaje = useCallback(async (mensaje: string) => {
-    if (!pedidoId || !mensaje.trim()) return false
+    if (!pedidoId || !mensaje.trim()) {
+      console.error('[Chat] Error: pedidoId o mensaje vacio')
+      return false
+    }
 
     setEnviando(true)
 
-    const { error } = await supabase.from("chat_mensajes").insert({
-      pedido_id: pedidoId,
-      order_id: orderId,
-      remitente: rol,
-      mensaje: mensaje.trim(),
-      leido: false,
-    })
+    try {
+      console.log(`[Chat ${rol}] Enviando mensaje:`, { pedidoId, orderId, remitente: rol, mensaje: mensaje.trim() })
+      const { error } = await supabase.from("chat_mensajes").insert({
+        pedido_id: pedidoId,
+        order_id: orderId,
+        remitente: rol,
+        mensaje: mensaje.trim(),
+        leido: false,
+      })
 
-    setEnviando(false)
+      if (error) {
+        console.error(`[Chat ${rol}] Error al enviar:`, error)
+        setEnviando(false)
+        return false
+      }
 
-    return !error
+      console.log(`[Chat ${rol}] Mensaje enviado exitosamente`)
+      setEnviando(false)
+      return true
+    } catch (err) {
+      console.error(`[Chat ${rol}] Excepcion al enviar:`, err)
+      setEnviando(false)
+      return false
+    }
   }, [pedidoId, orderId, rol])
 
   // Configurar Realtime
   useEffect(() => {
     if (!pedidoId) return
 
+    console.log(`[Chat ${rol}] Iniciando chat para pedido ${pedidoId}`)
     cargarMensajes()
 
     // Canal de Realtime para mensajes nuevos
+    // IMPORTANTE: El nombre del canal debe ser el mismo para admin y cliente
     const channel = supabase
-      .channel(`chat-${pedidoId}`)
+      .channel(`chat-pedido-${pedidoId}`)
       .on(
         "postgres_changes",
         {
@@ -115,9 +133,16 @@ export function useChat({ pedidoId, orderId, rol, onNuevoMensaje }: UseChatOptio
           filter: `pedido_id=eq.${pedidoId}`,
         },
         (payload) => {
+          console.log(`[Chat ${rol}] Nuevo mensaje recibido:`, payload)
           const nuevoMensaje = payload.new as ChatMensaje
 
-          setMensajes((prev) => [...prev, nuevoMensaje])
+          setMensajes((prev) => {
+            // Evitar duplicados
+            if (prev.some((m) => m.id === nuevoMensaje.id)) {
+              return prev
+            }
+            return [...prev, nuevoMensaje]
+          })
 
           if (nuevoMensaje.remitente !== rol) {
             setNoLeidos((prev) => prev + 1)
@@ -126,16 +151,23 @@ export function useChat({ pedidoId, orderId, rol, onNuevoMensaje }: UseChatOptio
           }
         }
       )
-      .subscribe((status) => {
+      .subscribe((status, err) => {
+        console.log(`[Chat ${rol}] Estado conexion:`, status, err)
         setConectado(status === 'SUBSCRIBED')
+        if (status === 'CHANNEL_ERROR') {
+          console.error(`[Chat ${rol}] Error en canal:`, err)
+        }
       })
 
     canalRef.current = channel
 
-    // Polling como respaldo
-    const interval = setInterval(cargarMensajes, 5000)
+    // Polling mas frecuente como respaldo
+    const interval = setInterval(() => {
+      cargarMensajes()
+    }, 3000)
 
     return () => {
+      console.log(`[Chat ${rol}] Limpiando suscripcion`)
       if (canalRef.current) {
         supabase.removeChannel(canalRef.current)
       }
