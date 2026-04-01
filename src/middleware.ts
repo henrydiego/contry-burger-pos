@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { canAccessRoute, getHomePage } from '@/lib/roles'
 
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
@@ -35,14 +36,13 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/api/') // las APIs manejan su propia auth
 
   const isMenuRoute = pathname.startsWith('/menu')
-  const isAdmin = user?.app_metadata?.role === 'admin'
+  const role = user?.app_metadata?.role as string | undefined
 
   // Sin sesión → redirigir a /login
   if (!user) {
     if (isPublic) return supabaseResponse
     const url = request.nextUrl.clone()
     url.pathname = '/login'
-    // Para rutas de menú, pasar el destino para redirigir al volver
     if (isMenuRoute) url.searchParams.set('next', pathname)
     return NextResponse.redirect(url)
   }
@@ -50,17 +50,17 @@ export async function middleware(request: NextRequest) {
   // Ya logueado y va a /login → redirigir según rol
   if (pathname === '/login') {
     const url = request.nextUrl.clone()
-    url.pathname = isAdmin ? '/' : '/menu'
+    url.pathname = getHomePage(role)
     return NextResponse.redirect(url)
   }
 
   // Rutas públicas con sesión activa → dejar pasar
   if (isPublic) return supabaseResponse
 
-  // Cliente Google (no admin): solo puede acceder a /menu
-  if (!isAdmin && !isMenuRoute) {
+  // Verificar permisos por rol
+  if (!canAccessRoute(role, pathname)) {
     const url = request.nextUrl.clone()
-    url.pathname = '/menu'
+    url.pathname = getHomePage(role)
     return NextResponse.redirect(url)
   }
 

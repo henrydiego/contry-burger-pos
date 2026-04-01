@@ -2,7 +2,9 @@
 
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
+import { useState, useEffect } from "react"
 import { supabase } from "@/lib/supabase"
+import { canAccessRoute } from "@/lib/roles"
 
 const menuItems = [
   { href: "/", label: "Dashboard", icon: "📊" },
@@ -30,6 +32,15 @@ interface SidebarProps {
 export default function Sidebar({ onClose }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
+  const [role, setRole] = useState<string | undefined>(undefined)
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setRole(data.user?.app_metadata?.role)
+    })
+  }, [])
+
+  const visibleItems = menuItems.filter(item => canAccessRoute(role, item.href))
 
   async function handleLogout() {
     await supabase.auth.signOut()
@@ -42,9 +53,10 @@ export default function Sidebar({ onClose }: SidebarProps) {
       <div className="p-4 border-b border-gray-700 flex items-center justify-between shrink-0">
         <div>
           <h1 className="text-lg font-bold text-red-500">🍔 Contry Burger</h1>
-          <p className="text-xs text-gray-400 mt-0.5">Sistema POS / ERP</p>
+          <p className="text-xs text-gray-400 mt-0.5">
+            {role === 'cajero' ? 'Caja' : 'Sistema POS / ERP'}
+          </p>
         </div>
-        {/* Cerrar en mobile */}
         {onClose && (
           <button
             onClick={onClose}
@@ -59,7 +71,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
       </div>
 
       <nav className="flex-1 py-2 overflow-y-auto">
-        {menuItems.map((item) => {
+        {visibleItems.map((item) => {
           const isActive = pathname === item.href
           return (
             <Link

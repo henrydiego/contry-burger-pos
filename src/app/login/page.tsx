@@ -3,6 +3,7 @@
 import { useState, Suspense } from "react"
 import { supabase } from "@/lib/supabase"
 import { useRouter, useSearchParams } from "next/navigation"
+import { getHomePage } from "@/lib/roles"
 
 function LoginForm() {
   const router = useRouter()
@@ -28,8 +29,8 @@ function LoginForm() {
       return
     }
 
-    const isAdmin = data.user?.app_metadata?.role === 'admin'
-    router.push(isAdmin ? "/" : "/menu")
+    const role = data.user?.app_metadata?.role
+    router.push(getHomePage(role))
     router.refresh()
   }
 
