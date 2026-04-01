@@ -44,7 +44,12 @@ function SeguimientoContent() {
   // No remover el #, buscar exactamente como está en la URL
   const orderId = rawOrderId ? decodeURIComponent(rawOrderId).trim() : ""
 
-  console.log("[Seguimiento] orderId raw:", rawOrderId, "parsed:", orderId)
+  console.log("[Seguimiento] ===== DEBUG =====")
+  console.log("[Seguimiento] URL completa:", typeof window !== 'undefined' ? window.location.href : 'SSR')
+  console.log("[Seguimiento] searchParams.get('order'):", rawOrderId)
+  console.log("[Seguimiento] orderId procesado:", orderId)
+  console.log("[Seguimiento] orderId length:", orderId?.length)
+  console.log("[Seguimiento] orderId char codes:", orderId?.split('').map((c: string) => `${c}(${c.charCodeAt(0)})`).join(','))
   const [pedido, setPedido] = useState<Pedido | null>(null)
   const [loading, setLoading] = useState(true)
   const [alerted, setAlerted] = useState(false)
@@ -86,11 +91,29 @@ function SeguimientoContent() {
 
   async function loadPedido() {
     try {
-      console.log("[Seguimiento] Cargando pedido:", orderId)
-      const { data, error } = await supabase.from("pedidos").select("*").eq("order_id", orderId).single()
+      console.log("[Seguimiento] Cargando pedido, orderId=", orderId, "tipo:", typeof orderId)
+      if (!orderId) {
+        console.log("[Seguimiento] ERROR: orderId está vacío")
+        setPedido(null)
+        setLoading(false)
+        return
+      }
+
+      // Intentar buscar por order_id
+      console.log("[Seguimiento] Buscando por order_id:", orderId)
+      let { data, error } = await supabase.from("pedidos").select("*").eq("order_id", orderId).single()
+
+      // Si falla, intentar buscar por id numérico (sin el #)
+      if (error && orderId.startsWith('#')) {
+        const idNumerico = orderId.replace('#', '')
+        console.log("[Seguimiento] Fallback: buscando por id numérico:", idNumerico)
+        const result = await supabase.from("pedidos").select("*").eq("id", idNumerico).single()
+        data = result.data
+        error = result.error
+      }
 
       if (error) {
-        console.error("[Seguimiento] Error cargando pedido:", error)
+        console.error("[Seguimiento] Error cargando pedido:", error.message, "code:", error.code)
         setPedido(null)
       } else {
         console.log("[Seguimiento] Pedido cargado:", data)
