@@ -334,25 +334,33 @@ export default function POSPage() {
     try {
       const el = document.getElementById("ticket-print")
       if (!el) return
-      // Clonar el ticket fuera del viewport para capturarlo completo sin cortes
-      const clone = el.cloneNode(true) as HTMLElement
-      clone.style.position = "fixed"
-      clone.style.left = "-9999px"
-      clone.style.top = "0"
-      clone.style.width = "320px"
-      clone.style.height = "auto"
-      clone.style.overflow = "visible"
-      clone.style.padding = "20px"
-      clone.style.backgroundColor = "#ffffff"
-      document.body.appendChild(clone)
-      const canvas = await html2canvas(clone, {
+
+      // Temporalmente forzar el elemento a ser completamente visible
+      const modal = document.getElementById('ticket-modal')
+      const prevModalStyle = modal?.style.cssText || ''
+      if (modal) {
+        modal.style.maxHeight = 'none'
+        modal.style.overflow = 'visible'
+      }
+      el.style.overflow = 'visible'
+      el.style.height = 'auto'
+
+      // Esperar un frame para que el browser re-renderice
+      await new Promise(r => setTimeout(r, 100))
+
+      const canvas = await html2canvas(el, {
         backgroundColor: "#ffffff",
         scale: 2,
-        height: clone.scrollHeight,
-        windowHeight: clone.scrollHeight,
-        useCORS: true,
+        scrollY: -window.scrollY,
+        height: el.scrollHeight + 40,
+        windowHeight: el.scrollHeight + 40,
       })
-      document.body.removeChild(clone)
+
+      // Restaurar estilos
+      if (modal) modal.style.cssText = prevModalStyle
+      el.style.overflow = ''
+      el.style.height = ''
+
       const link = document.createElement("a")
       link.download = `venta-cajero-${ticketData?.orderId}-${ticketData?.fecha}.png`
       link.href = canvas.toDataURL("image/png")
@@ -588,7 +596,7 @@ export default function POSPage() {
               box-sizing: border-box;
             }
           `}</style>
-          <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full mx-4 max-h-[90vh] overflow-y-auto">
+          <div id="ticket-modal" className="bg-white rounded-xl shadow-2xl max-w-sm w-full mx-4 max-h-[90vh] overflow-y-auto">
             {/* Modal header */}
             <div className="bg-blue-800 text-white p-4 flex items-center justify-between">
               <div>
