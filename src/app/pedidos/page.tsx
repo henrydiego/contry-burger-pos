@@ -178,10 +178,14 @@ export default function PedidosPage() {
     // Polling cada 3s como respaldo garantizado
     const interval = setInterval(fetchPedidos, 3000)
 
+    // Polling respaldo para chat no leidos (cada 5s por si Realtime falla)
+    const chatInterval = setInterval(loadChatNoLeidos, 5000)
+
     return () => {
       supabase.removeChannel(channel)
       supabase.removeChannel(chatChannel)
       clearInterval(interval)
+      clearInterval(chatInterval)
       if (alertaTimerRef.current) clearTimeout(alertaTimerRef.current)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
