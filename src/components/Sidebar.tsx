@@ -22,6 +22,7 @@ const menuItems = [
   { href: "/estado-resultados", label: "Est. Resultados", icon: "🧾" },
   { href: "/horas-pico", label: "Horas Pico", icon: "🕐" },
   { href: "/merma", label: "Merma", icon: "⚠️" },
+  { href: "/registro-historico", label: "Registro Histórico", icon: "📝" },
   { href: "/config", label: "Configuración", icon: "⚙️" },
 ]
 
