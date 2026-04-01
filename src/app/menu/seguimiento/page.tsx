@@ -102,18 +102,22 @@ function SeguimientoContent() {
       // Intentar buscar por order_id (usar maybeSingle en lugar de single)
       console.log("[Seguimiento] Buscando por order_id:", orderId)
       let { data, error } = await supabase.from("pedidos").select("*").eq("order_id", orderId).maybeSingle()
+      console.log("[Seguimiento] Resultado por order_id:", { data, error })
 
       // Si no se encuentra, intentar buscar por id numérico (sin el #)
       if (!data && orderId.startsWith('#')) {
-        const idNumerico = orderId.replace('#', '')
+        const idNumerico = parseInt(orderId.replace('#', ''), 10)
         console.log("[Seguimiento] Fallback: buscando por id numérico:", idNumerico)
-        const result = await supabase.from("pedidos").select("*").eq("id", idNumerico).maybeSingle()
-        data = result.data
-        error = result.error
+        if (!isNaN(idNumerico)) {
+          const result = await supabase.from("pedidos").select("*").eq("id", idNumerico).maybeSingle()
+          console.log("[Seguimiento] Resultado por id numérico:", { data: result.data, error: result.error })
+          data = result.data
+          error = result.error
+        }
       }
 
       if (error) {
-        console.error("[Seguimiento] Error cargando pedido:", error.message, "code:", error.code)
+        console.error("[Seguimiento] Error cargando pedido:", error)
         setPedido(null)
       } else if (!data) {
         console.log("[Seguimiento] Pedido no encontrado en BD:", orderId)
