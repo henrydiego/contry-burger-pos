@@ -334,7 +334,25 @@ export default function POSPage() {
     try {
       const el = document.getElementById("ticket-print")
       if (!el) return
-      const canvas = await html2canvas(el, { backgroundColor: "#ffffff", scale: 2 })
+      // Clonar el ticket fuera del viewport para capturarlo completo sin cortes
+      const clone = el.cloneNode(true) as HTMLElement
+      clone.style.position = "fixed"
+      clone.style.left = "-9999px"
+      clone.style.top = "0"
+      clone.style.width = "320px"
+      clone.style.height = "auto"
+      clone.style.overflow = "visible"
+      clone.style.padding = "20px"
+      clone.style.backgroundColor = "#ffffff"
+      document.body.appendChild(clone)
+      const canvas = await html2canvas(clone, {
+        backgroundColor: "#ffffff",
+        scale: 2,
+        height: clone.scrollHeight,
+        windowHeight: clone.scrollHeight,
+        useCORS: true,
+      })
+      document.body.removeChild(clone)
       const link = document.createElement("a")
       link.download = `venta-cajero-${ticketData?.orderId}-${ticketData?.fecha}.png`
       link.href = canvas.toDataURL("image/png")
@@ -570,7 +588,7 @@ export default function POSPage() {
               box-sizing: border-box;
             }
           `}</style>
-          <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full mx-4 overflow-hidden">
+          <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full mx-4 max-h-[90vh] overflow-y-auto">
             {/* Modal header */}
             <div className="bg-blue-800 text-white p-4 flex items-center justify-between">
               <div>
