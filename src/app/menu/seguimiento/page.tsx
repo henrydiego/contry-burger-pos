@@ -40,7 +40,9 @@ function getStepIndex(estado: string, pagoVerificado: boolean, esQr: boolean): n
 function SeguimientoContent() {
   const searchParams = useSearchParams()
   const rawOrderId = searchParams.get("order")
-  const orderId = rawOrderId ? decodeURIComponent(rawOrderId).replace("#", "").trim() : ""
+  // El order_id en BD se guarda como #25, #26, etc. (con # incluido)
+  // No remover el #, buscar exactamente como está en la URL
+  const orderId = rawOrderId ? decodeURIComponent(rawOrderId).trim() : ""
 
   console.log("[Seguimiento] orderId raw:", rawOrderId, "parsed:", orderId)
   const [pedido, setPedido] = useState<Pedido | null>(null)
