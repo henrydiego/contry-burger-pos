@@ -36,10 +36,14 @@ function preguntar(pregunta) {
 }
 
 async function borrarTabla(tabla) {
-  const { error } = await supabase.from(tabla).delete().neq('id', '___inexistente___')
+  const { error } = await supabase.from(tabla).delete().gte('id', 0)
   if (error) {
-    console.log(`  !! ${tabla}: ${error.message}`)
-    return false
+    // Si id no es integer (uuid), intentar con gt
+    const { error: err2 } = await supabase.from(tabla).delete().neq('id', '00000000-0000-0000-0000-000000000000')
+    if (err2) {
+      console.log(`  !! ${tabla}: ${err2.message}`)
+      return false
+    }
   }
   console.log(`  -> ${tabla}: limpiado`)
   return true
