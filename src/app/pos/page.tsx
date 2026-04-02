@@ -95,26 +95,6 @@ export default function POSPage() {
       }
     })
 
-    // Keep session alive: listen for auth changes and auto-refresh
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'TOKEN_REFRESHED') {
-        console.log('Sesion renovada automaticamente')
-      }
-      if (event === 'SIGNED_OUT') {
-        window.location.href = '/login'
-      }
-    })
-
-    // Periodic session refresh every 10 minutes to prevent expiry
-    const refreshInterval = setInterval(async () => {
-      const { error } = await supabase.auth.getSession()
-      if (error) console.error('Error refreshing session:', error)
-    }, 10 * 60 * 1000)
-
-    return () => {
-      subscription.unsubscribe()
-      clearInterval(refreshInterval)
-    }
   }, [])
 
   async function loadData() {

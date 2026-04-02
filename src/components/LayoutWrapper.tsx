@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation"
 import { useState, useEffect } from "react"
 import Sidebar from "./Sidebar"
+import { supabase } from "@/lib/supabase"
 
 export default function LayoutWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
@@ -14,6 +15,26 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
   useEffect(() => {
     setSidebarOpen(false)
   }, [pathname])
+
+  // Auto-refresh de sesión global — evita que se cierre en cualquier página
+  useEffect(() => {
+    if (isPublicPage) return
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_OUT') {
+        window.location.href = '/login'
+      }
+    })
+
+    const refreshInterval = setInterval(async () => {
+      await supabase.auth.getSession()
+    }, 10 * 60 * 1000)
+
+    return () => {
+      subscription.unsubscribe()
+      clearInterval(refreshInterval)
+    }
+  }, [isPublicPage])
 
   if (isPublicPage) {
     return <div className="min-h-screen">{children}</div>
