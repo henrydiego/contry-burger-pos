@@ -409,8 +409,8 @@ export default function CajaPage() {
               )}
           </div>
 
-          {/* Cierre con arqueo de denominaciones — solo admin */}
-          {userRole === 'admin' && (
+          {/* Cierre con arqueo de denominaciones — admin y cajero */}
+          {(
           <div className="bg-white rounded-2xl border shadow p-5 space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="font-bold text-gray-800">Cierre de Caja — Arqueo</h3>
