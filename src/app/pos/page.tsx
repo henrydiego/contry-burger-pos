@@ -129,7 +129,7 @@ export default function POSPage() {
     setRecetas(recRes.data || [])
     setInventario(invRes.data || [])
     const caja = cajaRes.data?.[0]
-    setCajaAbierta(caja?.estado === "Abierta")
+    setCajaAbierta(!!caja) // Solo bloquear si NO existe caja del día
     const newId = await generateOrderId()
     setOrderId(newId)
     setLoading(false)
@@ -303,7 +303,6 @@ export default function POSPage() {
         .from("caja_diaria")
         .select("*")
         .eq("fecha", hoy)
-        .eq("estado", "Abierta")
         .limit(1)
 
       if (cajaExistente && cajaExistente.length > 0) {
