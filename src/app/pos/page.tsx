@@ -53,6 +53,7 @@ export default function POSPage() {
   const [ticketData, setTicketData] = useState<TicketData | null>(null)
   const [guardandoImg, setGuardandoImg] = useState(false)
   const [montoRecibido, setMontoRecibido] = useState("")
+  const [cajaAbierta, setCajaAbierta] = useState<boolean | null>(null) // null = loading
 
   const generateOrderId = useCallback(async () => {
     const { data } = await supabase
@@ -88,23 +89,47 @@ export default function POSPage() {
       const role = data.user?.app_metadata?.role as Role | undefined
       setUserRole(role)
       if (role === 'cajero') {
-        // Use email prefix as cashier name
         const email = data.user?.email || ''
         const name = data.user?.user_metadata?.full_name || email.split('@')[0]
         setCajero(name)
       }
     })
+
+    // Keep session alive: listen for auth changes and auto-refresh
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'TOKEN_REFRESHED') {
+        console.log('Sesion renovada automaticamente')
+      }
+      if (event === 'SIGNED_OUT') {
+        window.location.href = '/login'
+      }
+    })
+
+    // Periodic session refresh every 10 minutes to prevent expiry
+    const refreshInterval = setInterval(async () => {
+      const { error } = await supabase.auth.getSession()
+      if (error) console.error('Error refreshing session:', error)
+    }, 10 * 60 * 1000)
+
+    return () => {
+      subscription.unsubscribe()
+      clearInterval(refreshInterval)
+    }
   }, [])
 
   async function loadData() {
-    const [prodRes, recRes, invRes] = await Promise.all([
+    const hoy = new Date().toISOString().split("T")[0]
+    const [prodRes, recRes, invRes, cajaRes] = await Promise.all([
       supabase.from("productos").select("*").eq("activo", true).order("categoria"),
       supabase.from("recetas").select("*"),
       supabase.from("inventario").select("*"),
+      supabase.from("caja_diaria").select("id, estado").eq("fecha", hoy).limit(1),
     ])
     setProductos(prodRes.data || [])
     setRecetas(recRes.data || [])
     setInventario(invRes.data || [])
+    const caja = cajaRes.data?.[0]
+    setCajaAbierta(caja?.estado === "Abierta")
     const newId = await generateOrderId()
     setOrderId(newId)
     setLoading(false)
@@ -209,56 +234,79 @@ export default function POSPage() {
       const { error } = await supabase.from("ventas").insert(ventaRows)
       if (error) throw error
 
-      // 2. Deduct inventory: update consumo_total AND stock_actual
+      // 2. Deduct inventory in background (non-blocking)
       const alertasNuevas: StockAlert[] = []
-      for (const item of carrito) {
-        const recetasProducto = recetas.filter((r) => r.producto_id === item.producto_id)
-        for (const rec of recetasProducto) {
-          const cantidadDescontar = rec.cantidad * item.cantidad
-          const { data: invData } = await supabase
-            .from("inventario")
-            .select("consumo_total, stock_actual, stock_minimo, nombre, unidad")
-            .eq("ingrediente_id", rec.ingrediente_id)
-            .single()
-          if (invData) {
-            const nuevoConsumo = (Number(invData.consumo_total) || 0) + cantidadDescontar
-            const nuevoStock = (Number(invData.stock_actual) || 0) - cantidadDescontar
-            await supabase
-              .from("inventario")
-              .update({
-                consumo_total: nuevoConsumo,
-                stock_actual: Math.max(0, nuevoStock),
-                ultima_actualizacion: new Date().toISOString(),
-              })
-              .eq("ingrediente_id", rec.ingrediente_id)
+      const carritoSnapshot = [...carrito]
+      const recetasSnapshot = [...recetas]
 
-            // Check stock alert
-            if (nuevoStock <= (Number(invData.stock_minimo) || 0)) {
-              alertasNuevas.push({
-                ingrediente: invData.nombre,
-                stock_actual: Math.max(0, nuevoStock),
-                stock_minimo: Number(invData.stock_minimo) || 0,
-                unidad: invData.unidad,
-              })
+      // Fire-and-forget: update inventory without blocking the sale
+      ;(async () => {
+        try {
+          // Aggregate all ingredient deductions first
+          const deductions: Record<string, number> = {}
+          for (const item of carritoSnapshot) {
+            const recetasProducto = recetasSnapshot.filter((r) => r.producto_id === item.producto_id)
+            for (const rec of recetasProducto) {
+              const key = rec.ingrediente_id
+              deductions[key] = (deductions[key] || 0) + rec.cantidad * item.cantidad
             }
           }
-        }
-      }
 
-      // 3. Register in caja_diaria automatically
+          // Update all ingredients in parallel
+          const updates = Object.entries(deductions).map(async ([ingredienteId, cantidadDescontar]) => {
+            const { data: invData } = await supabase
+              .from("inventario")
+              .select("consumo_total, stock_actual, stock_minimo, nombre, unidad")
+              .eq("ingrediente_id", ingredienteId)
+              .single()
+            if (invData) {
+              const nuevoConsumo = (Number(invData.consumo_total) || 0) + cantidadDescontar
+              const nuevoStock = (Number(invData.stock_actual) || 0) - cantidadDescontar
+              await supabase
+                .from("inventario")
+                .update({
+                  consumo_total: nuevoConsumo,
+                  stock_actual: Math.max(0, nuevoStock),
+                  ultima_actualizacion: new Date().toISOString(),
+                })
+                .eq("ingrediente_id", ingredienteId)
+
+              if (nuevoStock <= (Number(invData.stock_minimo) || 0)) {
+                alertasNuevas.push({
+                  ingrediente: invData.nombre,
+                  stock_actual: Math.max(0, nuevoStock),
+                  stock_minimo: Number(invData.stock_minimo) || 0,
+                  unidad: invData.unidad,
+                })
+              }
+            }
+          })
+          await Promise.all(updates)
+
+          if (alertasNuevas.length > 0) {
+            setAlertasStock(alertasNuevas)
+          }
+          // Refresh inventory data
+          const { data: invRefresh } = await supabase.from("inventario").select("*")
+          if (invRefresh) setInventario(invRefresh)
+        } catch (e) {
+          console.error("Error actualizando inventario:", e)
+        }
+      })()
+
+      // 3. Update caja_diaria (must be opened first via /caja)
       const ventaEfectivo = metodoPago === "efectivo" ? total : 0
       const ventaTarjeta = metodoPago === "tarjeta" ? total : 0
       const ventaQr = metodoPago === "qr" ? total : 0
 
-      // Check if caja_diaria exists for today
       const { data: cajaExistente } = await supabase
         .from("caja_diaria")
         .select("*")
         .eq("fecha", hoy)
+        .eq("estado", "Abierta")
         .limit(1)
 
       if (cajaExistente && cajaExistente.length > 0) {
-        // Update existing caja_diaria
         const caja = cajaExistente[0]
         const newEfectivo = (Number(caja.ventas_efectivo) || 0) + ventaEfectivo
         const newTarjeta = (Number(caja.ventas_tarjeta) || 0) + ventaTarjeta
@@ -276,31 +324,9 @@ export default function POSPage() {
             caja_final: newCajaFinal,
           })
           .eq("id", caja.id)
-      } else {
-        // Create new caja_diaria for today
-        const totalIngresos = ventaEfectivo + ventaTarjeta + ventaQr
-        await supabase.from("caja_diaria").insert({
-          fecha: hoy,
-          turno: "Completo",
-          caja_inicial: 0,
-          ventas_efectivo: ventaEfectivo,
-          ventas_tarjeta: ventaTarjeta,
-          ventas_qr: ventaQr,
-          otros_ingresos: 0,
-          total_ingresos: totalIngresos,
-          gastos_dia: 0,
-          caja_final: totalIngresos,
-          diferencia: 0,
-          estado: "Abierta",
-        })
       }
 
-      // Show alerts if any
-      if (alertasNuevas.length > 0) {
-        setAlertasStock(alertasNuevas)
-      }
-
-      // Show printable ticket
+      // Show printable ticket immediately (inventory updates in background)
       const montoEfectivo = metodoPago === "efectivo" && montoNum > 0 ? montoNum : undefined
       setTicketData({
         orderId,
@@ -316,10 +342,6 @@ export default function POSPage() {
       setCarrito([])
       const newId = await generateOrderId()
       setOrderId(newId)
-
-      // Refresh inventory data
-      const { data: invRefresh } = await supabase.from("inventario").select("*")
-      if (invRefresh) setInventario(invRefresh)
 
     } catch (err) {
       console.error(err)
@@ -374,6 +396,22 @@ export default function POSPage() {
 
   if (loading) {
     return <div className="flex items-center justify-center h-full text-gray-400">Cargando productos...</div>
+  }
+
+  if (cajaAbierta === false) {
+    return (
+      <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
+        <div className="bg-white border-2 border-dashed border-orange-300 rounded-2xl p-12 text-center space-y-4 max-w-md">
+          <p className="text-5xl">🏧</p>
+          <p className="text-xl font-bold text-gray-700">La caja no esta abierta</p>
+          <p className="text-sm text-gray-500">Para empezar a vender, primero abre la caja del dia con el monto inicial (caja chica).</p>
+          <a href="/caja"
+            className="inline-block bg-green-600 text-white px-8 py-3 rounded-xl font-bold text-lg hover:bg-green-700">
+            Ir a Abrir Caja
+          </a>
+        </div>
+      </div>
+    )
   }
 
   return (
