@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { supabase } from "@/lib/supabase"
 import html2canvas from "html2canvas"
+import { type Role } from "@/lib/roles"
 
 // ── Denominaciones Bolivia/Perú ──────────────────────────────
 const BILLETES = [200, 100, 50, 20, 10, 5, 2, 1]
@@ -75,8 +76,14 @@ export default function CajaPage() {
   const [formGasto, setFormGasto]       = useState({ concepto: "", monto: "", comprobante: "", categoria: "Operacion" })
   const [guardando, setGuardando]       = useState(false)
   const [guardandoImg, setGuardandoImg] = useState(false)
+  const [userRole, setUserRole]         = useState<Role | undefined>(undefined)
 
-  useEffect(() => { loadTodo() }, [])
+  useEffect(() => {
+    loadTodo()
+    supabase.auth.getUser().then(({ data }) => {
+      setUserRole(data.user?.app_metadata?.role as Role | undefined)
+    })
+  }, [])
 
   async function loadTodo() {
     const [cajaRes, histRes, gastosRes, vPosRes, vAppRes] = await Promise.all([
@@ -157,6 +164,21 @@ export default function CajaPage() {
     setGuardando(false)
     if (error) { alert("Error: " + error.message); return }
     setShowCerrarForm(false); setConteo(initConteo()); setOtrosIngresos(""); loadTodo()
+  }
+
+  async function reabrirCaja() {
+    if (!cajaHoy || userRole !== 'admin') return
+    if (!confirm("Reabrir la caja del dia? Esto permite seguir registrando ventas y gastos.")) return
+    setGuardando(true)
+    const { error } = await supabase.from("caja_diaria").update({
+      estado: "Abierta",
+      hora_cierre: null,
+      efectivo_contado: null,
+      diferencia: 0,
+    }).eq("id", cajaHoy.id)
+    setGuardando(false)
+    if (error) { alert("Error: " + error.message); return }
+    loadTodo()
   }
 
   async function agregarGasto() {
@@ -267,11 +289,17 @@ export default function CajaPage() {
         <div className="bg-white border-2 border-dashed border-gray-300 rounded-2xl p-12 text-center space-y-4">
           <p className="text-5xl">🏧</p>
           <p className="text-xl font-bold text-gray-700">La caja no ha sido abierta hoy</p>
-          <p className="text-sm text-gray-500">Registra el monto inicial en efectivo para comenzar el dia</p>
-          <button onClick={() => setShowAbrirForm(true)}
-            className="bg-green-600 text-white px-10 py-3 rounded-xl font-bold text-lg hover:bg-green-700">
-            Abrir Caja del Dia
-          </button>
+          {userRole === 'admin' ? (
+            <>
+              <p className="text-sm text-gray-500">Registra el monto inicial en efectivo para comenzar el dia</p>
+              <button onClick={() => setShowAbrirForm(true)}
+                className="bg-green-600 text-white px-10 py-3 rounded-xl font-bold text-lg hover:bg-green-700">
+                Abrir Caja del Dia
+              </button>
+            </>
+          ) : (
+            <p className="text-sm text-gray-500">Pide al administrador que abra la caja para iniciar el dia</p>
+          )}
         </div>
       )}
 
@@ -387,7 +415,8 @@ export default function CajaPage() {
               )}
           </div>
 
-          {/* Cierre con arqueo de denominaciones */}
+          {/* Cierre con arqueo de denominaciones — solo admin */}
+          {userRole === 'admin' && (
           <div className="bg-white rounded-2xl border shadow p-5 space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="font-bold text-gray-800">Cierre de Caja — Arqueo</h3>
@@ -491,6 +520,7 @@ export default function CajaPage() {
               </div>
             )}
           </div>
+          )}
         </div>
       )}
 
@@ -505,6 +535,12 @@ export default function CajaPage() {
               </p>
             </div>
             <div className="flex gap-2">
+              {userRole === 'admin' && (
+                <button onClick={reabrirCaja} disabled={guardando}
+                  className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-green-700 disabled:opacity-50">
+                  {guardando ? "..." : "Reabrir Caja"}
+                </button>
+              )}
               <button onClick={() => abrirArqueo(cajaHoy)}
                 className="bg-gray-800 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-gray-700">
                 Ver Arqueo
