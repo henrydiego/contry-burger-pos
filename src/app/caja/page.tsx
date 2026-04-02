@@ -289,17 +289,11 @@ export default function CajaPage() {
         <div className="bg-white border-2 border-dashed border-gray-300 rounded-2xl p-12 text-center space-y-4">
           <p className="text-5xl">🏧</p>
           <p className="text-xl font-bold text-gray-700">La caja no ha sido abierta hoy</p>
-          {userRole === 'admin' ? (
-            <>
-              <p className="text-sm text-gray-500">Registra el monto inicial en efectivo para comenzar el dia</p>
-              <button onClick={() => setShowAbrirForm(true)}
-                className="bg-green-600 text-white px-10 py-3 rounded-xl font-bold text-lg hover:bg-green-700">
-                Abrir Caja del Dia
-              </button>
-            </>
-          ) : (
-            <p className="text-sm text-gray-500">Pide al administrador que abra la caja para iniciar el dia</p>
-          )}
+          <p className="text-sm text-gray-500">Registra el monto inicial en efectivo (caja chica) para comenzar el dia</p>
+          <button onClick={() => setShowAbrirForm(true)}
+            className="bg-green-600 text-white px-10 py-3 rounded-xl font-bold text-lg hover:bg-green-700">
+            Abrir Caja del Dia
+          </button>
         </div>
       )}
 
