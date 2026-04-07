@@ -310,7 +310,7 @@ export default function CajaPage() {
 
             <div className="grid grid-cols-2 gap-3">
               <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 space-y-1.5">
-                <p className="text-xs font-black text-blue-700 uppercase tracking-wide">POS — Cajero</p>
+                <p className="text-xs font-black text-blue-700 uppercase tracking-wide">VENTAS DE CAJA</p>
                 <div className="flex justify-between text-sm"><span className="text-gray-600">Efectivo</span><span className="font-bold">${ventasPos.efectivo.toFixed(2)}</span></div>
                 <div className="flex justify-between text-sm"><span className="text-gray-600">QR / Digital</span><span className="font-bold">${ventasPos.qr.toFixed(2)}</span></div>
                 {ventasPos.tarjeta > 0 && <div className="flex justify-between text-sm"><span className="text-gray-600">Tarjeta</span><span className="font-bold">${ventasPos.tarjeta.toFixed(2)}</span></div>}
@@ -318,7 +318,7 @@ export default function CajaPage() {
               </div>
 
               <div className="bg-purple-50 border border-purple-200 rounded-xl p-3 space-y-1.5">
-                <p className="text-xs font-black text-purple-700 uppercase tracking-wide">App — Clientes</p>
+                <p className="text-xs font-black text-purple-700 uppercase tracking-wide">VENTAS EN LÍNEA</p>
                 <div className="flex justify-between text-sm"><span className="text-gray-600">Efectivo</span><span className="font-bold">${ventasApp.efectivo.toFixed(2)}</span></div>
                 <div className="flex justify-between text-sm"><span className="text-gray-600">QR / Digital</span><span className="font-bold">${ventasApp.qr.toFixed(2)}</span></div>
                 <div className="flex justify-between font-black text-purple-700 border-t border-purple-200 pt-1 text-sm"><span>Subtotal</span><span>${totalAppHoy.toFixed(2)}</span></div>
