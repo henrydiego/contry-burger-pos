@@ -729,31 +729,6 @@ export default function POSPage() {
         </div>
       )}
 
-      {/* Stock Alerts Modal */}
-      {alertasStock.length > 0 && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-bold text-red-600 mb-3">Alerta de Inventario Bajo</h3>
-            <div className="space-y-2 mb-4">
-              {alertasStock.map((a, i) => (
-                <div key={i} className="flex justify-between items-center bg-red-50 p-2 rounded text-sm">
-                  <span className="font-medium">{a.ingrediente}</span>
-                  <span className="text-red-600">
-                    {a.stock_actual.toFixed(2)} / {a.stock_minimo.toFixed(2)} {a.unidad}
-                  </span>
-                </div>
-              ))}
-            </div>
-            <p className="text-xs text-gray-500 mb-3">Estos ingredientes estan por debajo del stock minimo. Considera hacer una compra.</p>
-            <button
-              onClick={() => setAlertasStock([])}
-              className="w-full bg-red-600 text-white py-2 rounded font-semibold hover:bg-red-700"
-            >
-              Entendido
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
