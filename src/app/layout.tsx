@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import LayoutWrapper from "@/components/LayoutWrapper";
+import InstallPrompt from "@/components/InstallPrompt";
 
 export const metadata: Metadata = {
   title: "Contry Burger - Pedidos Online",
@@ -27,9 +28,23 @@ export default function RootLayout({
     <html lang="es">
       <head>
         <link rel="apple-touch-icon" href="/icon-192.png" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => {
+                  navigator.serviceWorker.register('/sw.js')
+                    .then((registration) => console.log('SW registrado'))
+                    .catch((error) => console.log('SW error:', error));
+                });
+              }
+            `,
+          }}
+        />
       </head>
       <body>
         <LayoutWrapper>{children}</LayoutWrapper>
+        <InstallPrompt />
       </body>
     </html>
   );
