@@ -19,6 +19,7 @@ export function useChat({ pedidoId, orderId, rol, onNuevoMensaje }: UseChatOptio
   const [conectado, setConectado] = useState(false)
 
   const canalRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
+  const mountedRef = useRef(true)
 
   // Funcion para reproducir sonido de notificacion
   const reproducirSonido = useCallback(() => {
@@ -128,6 +129,9 @@ export function useChat({ pedidoId, orderId, rol, onNuevoMensaje }: UseChatOptio
   useEffect(() => {
     if (!pedidoId) return
 
+    // Marcar como montado
+    mountedRef.current = true
+
     console.log(`[Chat ${rol}] Iniciando chat para pedido ${pedidoId}`)
     cargarMensajes()
 
@@ -147,6 +151,9 @@ export function useChat({ pedidoId, orderId, rol, onNuevoMensaje }: UseChatOptio
           console.log(`[Chat ${rol}] Nuevo mensaje recibido:`, payload)
           const nuevoMensaje = payload.new as ChatMensaje
 
+          // Solo actualizar si el componente sigue montado
+          if (!mountedRef.current) return
+
           setMensajes((prev) => {
             // Evitar duplicados
             if (prev.some((m) => m.id === nuevoMensaje.id)) {
@@ -164,7 +171,10 @@ export function useChat({ pedidoId, orderId, rol, onNuevoMensaje }: UseChatOptio
       )
       .subscribe((status, err) => {
         console.log(`[Chat ${rol}] Estado conexion:`, status, err)
-        setConectado(status === 'SUBSCRIBED')
+        // Solo actualizar estado si el componente sigue montado
+        if (mountedRef.current) {
+          setConectado(status === 'SUBSCRIBED')
+        }
         if (status === 'CHANNEL_ERROR') {
           console.error(`[Chat ${rol}] Error en canal:`, err)
         }
@@ -174,11 +184,12 @@ export function useChat({ pedidoId, orderId, rol, onNuevoMensaje }: UseChatOptio
 
     // Polling mas frecuente como respaldo
     const interval = setInterval(() => {
-      cargarMensajes()
+      if (mountedRef.current) cargarMensajes()
     }, 3000)
 
     return () => {
       console.log(`[Chat ${rol}] Limpiando suscripcion`)
+      mountedRef.current = false
       if (canalRef.current) {
         supabase.removeChannel(canalRef.current)
       }

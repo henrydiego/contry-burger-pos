@@ -56,6 +56,10 @@ export default function PedidosPage() {
   const [chatNoLeidos, setChatNoLeidos] = useState<Record<number, number>>({})
   const chatNoLeidosTotal = Object.values(chatNoLeidos).reduce((s, n) => s + n, 0)
 
+  // Refs para cleanup robusto
+  const mountedRef = useRef(true)
+  const channelsRef = useRef<{ pedidos?: ReturnType<typeof supabase.channel>, chat?: ReturnType<typeof supabase.channel> }>({})
+
   function sonarAlertaChat() {
     try {
       const ctx = new AudioContext()
@@ -109,45 +113,63 @@ export default function PedidosPage() {
   }
 
   async function fetchPedidos() {
-    const { data } = await supabase
-      .from("pedidos")
-      .select("*")
-      .order("id", { ascending: false })
-      .limit(200)
-    const lista = (data as Pedido[]) || []
-    setLoading(false)
-    if (lista.length === 0) {
-      setPedidos([])
-      return
+    try {
+      const { data } = await supabase
+        .from("pedidos")
+        .select("*")
+        .order("id", { ascending: false })
+        .limit(200)
+
+      // Si el componente se desmontó, no actualizar estado
+      if (!mountedRef.current) return
+
+      const lista = (data as Pedido[]) || []
+      setLoading(false)
+      if (lista.length === 0) {
+        setPedidos([])
+        return
+      }
+      if (ultimoIdRef.current > 0 && lista[0].id > ultimoIdRef.current) {
+        const esQr = lista[0].metodo_pago === "qr" && !lista[0].pago_verificado
+        sonarAlerta(esQr)
+        setAlertaTipo(esQr ? "qr" : "normal")
+        if (alertaTimerRef.current) clearTimeout(alertaTimerRef.current)
+        alertaTimerRef.current = setTimeout(() => setAlertaTipo(null), 6000)
+      }
+      ultimoIdRef.current = lista[0].id
+      setPedidos(lista)
+    } catch (err) {
+      console.error("Error fetchPedidos:", err)
+    } finally {
+      if (mountedRef.current) {
+        setLoading(false)
+      }
     }
-    if (ultimoIdRef.current > 0 && lista[0].id > ultimoIdRef.current) {
-      const esQr = lista[0].metodo_pago === "qr" && !lista[0].pago_verificado
-      sonarAlerta(esQr)
-      setAlertaTipo(esQr ? "qr" : "normal")
-      if (alertaTimerRef.current) clearTimeout(alertaTimerRef.current)
-      alertaTimerRef.current = setTimeout(() => setAlertaTipo(null), 6000)
-    }
-    ultimoIdRef.current = lista[0].id
-    setPedidos(lista)
-    setLoading(false)
   }
 
   useEffect(() => {
+    // Marcar como montado
+    mountedRef.current = true
+
     fetchPedidos()
 
     // Cargar no leidos del chat inicialmente
     async function loadChatNoLeidos() {
-      const { data } = await supabase
-        .from("chat_mensajes")
-        .select("pedido_id")
-        .eq("remitente", "cliente")
-        .eq("leido", false)
-      if (data) {
-        const counts: Record<number, number> = {}
-        data.forEach((m: { pedido_id: number }) => {
-          counts[m.pedido_id] = (counts[m.pedido_id] || 0) + 1
-        })
-        setChatNoLeidos(counts)
+      try {
+        const { data } = await supabase
+          .from("chat_mensajes")
+          .select("pedido_id")
+          .eq("remitente", "cliente")
+          .eq("leido", false)
+        if (data && mountedRef.current) {
+          const counts: Record<number, number> = {}
+          data.forEach((m: { pedido_id: number }) => {
+            counts[m.pedido_id] = (counts[m.pedido_id] || 0) + 1
+          })
+          setChatNoLeidos(counts)
+        }
+      } catch {
+        // Ignorar errores si el componente ya no está montado
       }
     }
     loadChatNoLeidos()
@@ -155,8 +177,14 @@ export default function PedidosPage() {
     // Realtime para actualizaciones instantáneas
     const channel = supabase
       .channel("pedidos-realtime")
-      .on("postgres_changes", { event: "*", schema: "public", table: "pedidos" }, fetchPedidos)
+      .on("postgres_changes", { event: "*", schema: "public", table: "pedidos" }, () => {
+        // Solo actualizar si el componente sigue montado
+        if (mountedRef.current) {
+          fetchPedidos()
+        }
+      })
       .subscribe()
+    channelsRef.current.pedidos = channel
 
     // Realtime para mensajes de chat del cliente
     const chatChannel = supabase
@@ -167,7 +195,7 @@ export default function PedidosPage() {
         table: "chat_mensajes",
       }, (payload) => {
         const msg = payload.new as { pedido_id: number; remitente: string }
-        if (msg.remitente === "cliente") {
+        if (msg.remitente === "cliente" && mountedRef.current) {
           setChatNoLeidos(prev => ({
             ...prev,
             [msg.pedido_id]: (prev[msg.pedido_id] || 0) + 1,
@@ -176,16 +204,29 @@ export default function PedidosPage() {
         }
       })
       .subscribe()
+    channelsRef.current.chat = chatChannel
 
     // Polling cada 3s como respaldo garantizado
-    const interval = setInterval(fetchPedidos, 3000)
+    const interval = setInterval(() => {
+      if (mountedRef.current) fetchPedidos()
+    }, 3000)
 
     // Polling respaldo para chat no leidos (cada 5s por si Realtime falla)
-    const chatInterval = setInterval(loadChatNoLeidos, 5000)
+    const chatInterval = setInterval(() => {
+      if (mountedRef.current) loadChatNoLeidos()
+    }, 5000)
 
     return () => {
-      supabase.removeChannel(channel)
-      supabase.removeChannel(chatChannel)
+      // Limpiar todo al desmontar
+      mountedRef.current = false
+      // Guardar referencias locales para el cleanup
+      const { pedidos: pedidosCh, chat: chatCh } = channelsRef.current
+      if (pedidosCh) {
+        supabase.removeChannel(pedidosCh)
+      }
+      if (chatCh) {
+        supabase.removeChannel(chatCh)
+      }
       clearInterval(interval)
       clearInterval(chatInterval)
       if (alertaTimerRef.current) clearTimeout(alertaTimerRef.current)

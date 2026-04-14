@@ -44,16 +44,16 @@ BEGIN
       metodo_pago, estado, cajero, fecha, hora
     ) VALUES (
       v_pedido.order_id,
-      v_item.item->>'producto_id',
-      v_item.item->>'nombre',
+      v_item.value->>'producto_id',
+      v_item.value->>'nombre',
       COALESCE(
-        (SELECT categoria FROM productos WHERE id = v_item.item->>'producto_id'),
+        (SELECT categoria FROM productos WHERE id = v_item.value->>'producto_id'),
         'Sin categoria'
       ),
-      (v_item.item->>'cantidad')::INTEGER,
-      (v_item.item->>'precio_unitario')::NUMERIC,
-      (v_item.item->>'precio_unitario')::NUMERIC,
-      (v_item.item->>'subtotal')::NUMERIC,
+      (v_item.value->>'cantidad')::INTEGER,
+      (v_item.value->>'precio_unitario')::NUMERIC,
+      (v_item.value->>'precio_unitario')::NUMERIC,
+      (v_item.value->>'subtotal')::NUMERIC,
       v_pedido.metodo_pago,
       'Pagado',
       '',

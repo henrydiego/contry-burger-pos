@@ -57,7 +57,28 @@ ALTER TABLE ventas ADD COLUMN IF NOT EXISTS estado TEXT DEFAULT 'Pagado';
 ALTER TABLE ventas ADD COLUMN IF NOT EXISTS hora TIME DEFAULT CURRENT_TIME;
 ALTER TABLE ventas ADD COLUMN IF NOT EXISTS fecha DATE DEFAULT CURRENT_DATE;
 
--- 6. ACTUALIZAR tabla merma
+-- 6. CREAR tabla merma (si no existe)
+CREATE TABLE IF NOT EXISTS merma (
+  id SERIAL PRIMARY KEY,
+  merma_id TEXT DEFAULT '',
+  ingrediente_id TEXT DEFAULT '',
+  ingrediente TEXT DEFAULT '',
+  cantidad_perdida NUMERIC DEFAULT 0,
+  unidad TEXT DEFAULT '',
+  motivo TEXT DEFAULT '',
+  costo_unitario NUMERIC DEFAULT 0,
+  costo_merma NUMERIC DEFAULT 0,
+  responsable TEXT DEFAULT '',
+  fecha DATE DEFAULT CURRENT_DATE,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Habilitar RLS y crear política para merma
+ALTER TABLE merma ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow all" ON merma;
+CREATE POLICY "Allow all" ON merma FOR ALL USING (true) WITH CHECK (true);
+
+-- 6b. ACTUALIZAR tabla merma (agregar columnas faltantes si ya existía)
 ALTER TABLE merma ADD COLUMN IF NOT EXISTS merma_id TEXT DEFAULT '';
 ALTER TABLE merma ADD COLUMN IF NOT EXISTS ingrediente_id TEXT DEFAULT '';
 ALTER TABLE merma ADD COLUMN IF NOT EXISTS ingrediente TEXT DEFAULT '';

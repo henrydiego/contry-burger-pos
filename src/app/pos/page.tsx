@@ -49,7 +49,7 @@ export default function POSPage() {
   const [loading, setLoading] = useState(true)
   const [procesando, setProcesando] = useState(false)
   const [orderId, setOrderId] = useState("")
-  const [alertasStock, setAlertasStock] = useState<StockAlert[]>([])
+
   const [ticketData, setTicketData] = useState<TicketData | null>(null)
   const [guardandoImg, setGuardandoImg] = useState(false)
   const [montoRecibido, setMontoRecibido] = useState("")
@@ -264,7 +264,7 @@ export default function POSPage() {
           await Promise.all(updates)
 
           if (alertasNuevas.length > 0) {
-            setAlertasStock(alertasNuevas)
+            console.warn("Alerta de Inventario Bajo:", alertasNuevas)
           }
           // Refresh inventory data
           const { data: invRefresh } = await supabase.from("inventario").select("*")

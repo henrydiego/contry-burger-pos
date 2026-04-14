@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 
@@ -75,6 +75,10 @@ function estaAbierto(cfg: Config) {
 export default function MenuPublico() {
   const router = useRouter()
 
+  /* ─── Refs para cleanup ─── */
+  const mountedRef = useRef(true)
+  const abortControllerRef = useRef<AbortController | null>(null)
+
   /* ─── State ─── */
   const [productos, setProductos] = useState<Producto[]>([])
   const [categoriasDB, setCategoriasDB] = useState<CategoriaDB[]>([])
@@ -137,6 +141,9 @@ export default function MenuPublico() {
   }, [])
 
   useEffect(() => {
+    // Marcar como montado
+    mountedRef.current = true
+
     loadAll()
     const saved = sessionStorage.getItem("repeat_order")
     if (saved) {
@@ -144,13 +151,20 @@ export default function MenuPublico() {
       sessionStorage.removeItem("repeat_order")
     }
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) applyUser(session.user)
+      if (session?.user && mountedRef.current) applyUser(session.user)
     })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
+      if (!mountedRef.current) return
       if (session?.user) applyUser(session.user)
       else setGoogleUser(null)
     })
-    return () => subscription.unsubscribe()
+    return () => {
+      mountedRef.current = false
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort()
+      }
+      subscription.unsubscribe()
+    }
   }, [])
 
   function applyUser(user: { user_metadata?: Record<string, string>; email?: string }) {
@@ -160,15 +174,33 @@ export default function MenuPublico() {
   }
 
   async function loadAll() {
-    const [{ data: prods }, { data: cfg }, { data: cats }] = await Promise.all([
-      supabase.from("productos").select("*").eq("activo", true),
-      supabase.from("configuracion").select("*").eq("id", 1).single(),
-      supabase.from("categorias").select("nombre,icono,orden,activo,es_extra").eq("activo", true).order("orden"),
-    ])
-    setProductos(prods || [])
-    if (cfg) setConfig(prev => ({ ...prev, ...cfg }))
-    setCategoriasDB(cats || [])
-    setLoading(false)
+    // Cancelar llamada anterior si existe
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+    }
+    const controller = new AbortController()
+    abortControllerRef.current = controller
+
+    try {
+      const [{ data: prods }, { data: cfg }, { data: cats }] = await Promise.all([
+        supabase.from("productos").select("*").eq("activo", true),
+        supabase.from("configuracion").select("*").eq("id", 1).single(),
+        supabase.from("categorias").select("nombre,icono,orden,activo,es_extra").eq("activo", true).order("orden"),
+      ])
+
+      // Solo actualizar si el componente sigue montado
+      if (!mountedRef.current) return
+
+      setProductos(prods || [])
+      if (cfg) setConfig(prev => ({ ...prev, ...cfg }))
+      setCategoriasDB(cats || [])
+    } catch (err) {
+      console.error("Error loadAll:", err)
+    } finally {
+      if (mountedRef.current) {
+        setLoading(false)
+      }
+    }
   }
 
   async function instalarApp() {
