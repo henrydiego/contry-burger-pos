@@ -392,7 +392,7 @@ export default function PedidosPage() {
                 {/* Header */}
                 <div className={`text-white p-3 flex items-center justify-between ${esQrPendiente ? "bg-orange-600" : "bg-gray-800"}`}>
                   <div>
-                    <p className="font-bold">{pedido.order_id}</p>
+                    <p className="font-bold">Pedido {pedido.order_id}</p>
                     <p className="text-xs text-gray-400">{pedido.fecha} {pedido.hora}</p>
                   </div>
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${estadoInfo.color}`}>
@@ -601,7 +601,7 @@ export default function PedidosPage() {
             <div className="bg-purple-800 text-white p-3 flex items-center justify-between">
               <div>
                 <span className="font-bold text-sm">Pedido On Line — Recibo</span>
-                <p className="text-purple-300 text-xs">{ticketPedido.order_id} · {ticketPedido.cliente_nombre}</p>
+                <p className="text-purple-300 text-xs">Pedido {ticketPedido.order_id} · {ticketPedido.cliente_nombre}</p>
               </div>
               <div className="flex gap-2">
                 <button
@@ -640,7 +640,7 @@ export default function PedidosPage() {
               {/* Ticket number */}
               <div className="text-center mb-3">
                 <span className="bg-gray-800 text-white px-4 py-1 rounded text-base font-black tracking-widest">
-                  #{ticketPedido.order_id}
+                  Pedido #{ticketPedido.order_id}
                 </span>
               </div>
 

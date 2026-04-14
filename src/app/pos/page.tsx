@@ -628,7 +628,7 @@ export default function POSPage() {
             <div className="bg-blue-800 text-white p-4 flex items-center justify-between">
               <div>
                 <span className="font-bold text-sm">Venta Cajero — Ticket generado</span>
-                <p className="text-blue-300 text-xs">{ticketData?.orderId} · {ticketData?.cajero}</p>
+                <p className="text-blue-300 text-xs">Pedido {ticketData?.orderId} · {ticketData?.cajero}</p>
               </div>
               <div className="flex gap-2">
                 <button
@@ -672,7 +672,7 @@ export default function POSPage() {
               {/* Ticket number */}
               <div className="text-center mb-3">
                 <span className="bg-gray-800 text-white px-4 py-1 rounded text-base font-black tracking-widest">
-                  #{ticketData.orderId}
+                  Pedido #{ticketData.orderId}
                 </span>
               </div>
 
