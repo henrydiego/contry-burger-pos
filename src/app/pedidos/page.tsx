@@ -51,7 +51,6 @@ export default function PedidosPage() {
   const [guardandoImg, setGuardandoImg] = useState(false)
   const [procesando, setProcesando] = useState<Set<number>>(new Set())
   const [alertaTipo, setAlertaTipo] = useState<"normal" | "qr" | null>(null)
-  const [alertaSonando, setAlertaSonando] = useState(false)
   const ultimoIdRef = useRef<number>(0)
   const alertaTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [chatPedido, setChatPedido] = useState<Pedido | null>(null)
@@ -85,23 +84,16 @@ export default function PedidosPage() {
   }
 
   function sonarAlerta(esQr: boolean) {
-    // Usar el nuevo sistema de alerta tipo llamada
+    // Usar el nuevo sistema de alerta tipo llamada (15 segundos)
     reproducirAlerta({
       duracionSegundos: 15,
       volumen: esQr ? 1.0 : 0.9,
       frecuenciaBase: esQr ? 1000 : 800
     })
-    setAlertaSonando(true)
-
-    // Auto-detener visual después de 15 segundos
-    setTimeout(() => {
-      setAlertaSonando(false)
-    }, 15000)
   }
 
   function detenerAlertaSonido() {
     detenerAlerta()
-    setAlertaSonando(false)
   }
 
   async function fetchPedidos() {
