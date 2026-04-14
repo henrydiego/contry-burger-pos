@@ -4,6 +4,7 @@ import { useEffect, useState, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import ChatCliente from "@/components/ChatCliente"
+import { useAlertaSonido } from "@/hooks/useAlertaSonido"
 
 interface Pedido {
   id: number
@@ -60,6 +61,9 @@ function SeguimientoContent() {
   const [calificado, setCalificado] = useState(false)
   const [whatsappPhone, setWhatsappPhone] = useState("")
 
+  // Hook para sonido de alerta cuando el pedido está listo
+  const { reproducir: reproducirAlerta } = useAlertaSonido()
+
   useEffect(() => {
     if (!orderId) return
     loadPedido()
@@ -82,12 +86,18 @@ function SeguimientoContent() {
   useEffect(() => {
     if (pedido?.estado === "listo" && !alerted) {
       setAlerted(true)
+      // Sonido de alerta tipo llamada por 15 segundos
+      reproducirAlerta({
+        duracionSegundos: 15,
+        volumen: 0.9,
+        frecuenciaBase: 900
+      })
       if (navigator.vibrate) navigator.vibrate([400, 100, 400, 100, 400])
       if (Notification.permission === "granted") {
         new Notification("🍔 ¡Tu pedido está listo!", { body: `${orderId} — Pasa a recogerlo` })
       }
     }
-  }, [pedido?.estado, alerted, orderId])
+  }, [pedido?.estado, alerted, orderId, reproducirAlerta])
 
   async function loadPedido() {
     try {

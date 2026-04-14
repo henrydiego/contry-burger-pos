@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase"
 import StatCard from "@/components/StatCard"
 import html2canvas from "html2canvas"
 import ChatPanel from "@/components/ChatPanel"
+import { useAlertaSonido } from "@/hooks/useAlertaSonido"
 
 interface PedidoItem {
   producto_id: string
@@ -50,11 +51,15 @@ export default function PedidosPage() {
   const [guardandoImg, setGuardandoImg] = useState(false)
   const [procesando, setProcesando] = useState<Set<number>>(new Set())
   const [alertaTipo, setAlertaTipo] = useState<"normal" | "qr" | null>(null)
+  const [alertaSonando, setAlertaSonando] = useState(false)
   const ultimoIdRef = useRef<number>(0)
   const alertaTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [chatPedido, setChatPedido] = useState<Pedido | null>(null)
   const [chatNoLeidos, setChatNoLeidos] = useState<Record<number, number>>({})
   const chatNoLeidosTotal = Object.values(chatNoLeidos).reduce((s, n) => s + n, 0)
+
+  // Hook para alerta de sonido tipo llamada
+  const { reproducir: reproducirAlerta, detener: detenerAlerta } = useAlertaSonido()
 
   // Refs para cleanup robusto
   const mountedRef = useRef(true)
@@ -80,36 +85,23 @@ export default function PedidosPage() {
   }
 
   function sonarAlerta(esQr: boolean) {
-    try {
-      const ctx = new AudioContext()
-      if (esQr) {
-        // 3 pitidos urgentes para QR
-        [0, 0.18, 0.36].forEach((t) => {
-          const osc = ctx.createOscillator()
-          const gain = ctx.createGain()
-          osc.connect(gain)
-          gain.connect(ctx.destination)
-          osc.frequency.setValueAtTime(1050, ctx.currentTime + t)
-          gain.gain.setValueAtTime(0.45, ctx.currentTime + t)
-          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.14)
-          osc.start(ctx.currentTime + t)
-          osc.stop(ctx.currentTime + t + 0.14)
-        })
-      } else {
-        // 2 pitidos normales
-        const osc = ctx.createOscillator()
-        const gain = ctx.createGain()
-        osc.connect(gain)
-        gain.connect(ctx.destination)
-        osc.frequency.setValueAtTime(880, ctx.currentTime)
-        osc.frequency.setValueAtTime(660, ctx.currentTime + 0.15)
-        gain.gain.setValueAtTime(0.4, ctx.currentTime)
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4)
-        osc.start(ctx.currentTime)
-        osc.stop(ctx.currentTime + 0.4)
-      }
-      setTimeout(() => ctx.close().catch(() => {}), 600)
-    } catch { /* ignorar si no soporta */ }
+    // Usar el nuevo sistema de alerta tipo llamada
+    reproducirAlerta({
+      duracionSegundos: 15,
+      volumen: esQr ? 1.0 : 0.9,
+      frecuenciaBase: esQr ? 1000 : 800
+    })
+    setAlertaSonando(true)
+
+    // Auto-detener visual después de 15 segundos
+    setTimeout(() => {
+      setAlertaSonando(false)
+    }, 15000)
+  }
+
+  function detenerAlertaSonido() {
+    detenerAlerta()
+    setAlertaSonando(false)
   }
 
   async function fetchPedidos() {
@@ -241,6 +233,9 @@ export default function PedidosPage() {
 
   async function verificarPago(pedidoId: number) {
     await supabase.from("pedidos").update({ pago_verificado: true }).eq("id", pedidoId)
+    // Detener sonido de alerta al confirmar pago
+    detenerAlertaSonido()
+    setAlertaTipo(null)
     await fetchPedidos()
   }
 
