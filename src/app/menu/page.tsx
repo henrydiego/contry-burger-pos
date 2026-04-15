@@ -645,7 +645,29 @@ export default function MenuPublico() {
                 <div className="bg-yellow-950/40 border border-yellow-800/40 rounded-2xl p-4 text-center space-y-3">
                   <p className="font-semibold text-yellow-300 text-sm">📱 Escanea y paga antes de confirmar</p>
                   <img src={config.qr_pago_url} alt="QR Pago" className="w-44 h-44 object-contain rounded-xl border border-yellow-800/30 bg-white mx-auto" />
-                  <a href={config.qr_pago_url} download className="text-sm text-blue-400 underline block">Descargar QR</a>
+                  <button
+                    onClick={async () => {
+                      try {
+                        const response = await fetch(config.qr_pago_url)
+                        const blob = await response.blob()
+                        const url = window.URL.createObjectURL(blob)
+                        const link = document.createElement('a')
+                        link.href = url
+                        link.download = `qr-pago-contryburger-${Date.now()}.png`
+                        document.body.appendChild(link)
+                        link.click()
+                        document.body.removeChild(link)
+                        window.URL.revokeObjectURL(url)
+                      } catch (err) {
+                        console.error('Error descargando QR:', err)
+                        // Fallback: abrir en nueva pestaña
+                        window.open(config.qr_pago_url, '_blank')
+                      }
+                    }}
+                    className="text-sm text-blue-400 underline block hover:text-blue-300"
+                  >
+                    📥 Descargar QR
+                  </button>
                   {config.instrucciones_pago && <p className="text-xs text-yellow-400">{config.instrucciones_pago}</p>}
                   <p className="text-2xl font-black text-yellow-300">Monto: ${total.toFixed(2)}</p>
                   <p className="text-xs text-yellow-500">Una vez pagado, presiona el botón de abajo ↓</p>
