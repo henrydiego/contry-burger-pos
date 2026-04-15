@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabase"
 import StatCard from "@/components/StatCard"
 import html2canvas from "html2canvas"
 import ChatPanel from "@/components/ChatPanel"
-import { useAlertaSonido } from "@/hooks/useAlertaSonido"
+import { useAlertaPedidos } from "@/hooks/useAlertaPedidos"
 
 interface PedidoItem {
   producto_id: string
@@ -57,8 +57,15 @@ export default function PedidosPage() {
   const [chatNoLeidos, setChatNoLeidos] = useState<Record<number, number>>({})
   const chatNoLeidosTotal = Object.values(chatNoLeidos).reduce((s, n) => s + n, 0)
 
-  // Hook para alerta de sonido tipo llamada
-  const { reproducir: reproducirAlerta, detener: detenerAlerta } = useAlertaSonido()
+  // Hook mejorado para alertas de pedidos (funciona en background)
+  const {
+    reproducir: reproducirAlerta,
+    detener: detenerAlerta,
+    solicitarPermisoNotificaciones,
+    solicitarWakeLock,
+    tienePermisoNotificacion,
+    tieneWakeLock,
+  } = useAlertaPedidos()
 
   // Refs para cleanup robusto
   const mountedRef = useRef(true)
@@ -83,13 +90,14 @@ export default function PedidosPage() {
     } catch { /* ignorar */ }
   }
 
-  function sonarAlerta(esQr: boolean) {
-    // Usar el nuevo sistema de alerta tipo llamada (15 segundos)
+  function sonarAlerta(esQr: boolean, pedidoInfo?: { order_id: string; cliente_nombre: string; total: number }) {
+    // Usar el nuevo sistema de alerta que funciona incluso en background
     reproducirAlerta({
-      duracionSegundos: 15,
+      duracionSegundos: 20,
       volumen: esQr ? 1.0 : 0.9,
-      frecuenciaBase: esQr ? 1000 : 800
-    })
+      frecuenciaBase: esQr ? 1000 : 800,
+      tipo: esQr ? "qr" : "normal"
+    }, pedidoInfo)
   }
 
   function detenerAlertaSonido() {
@@ -131,11 +139,33 @@ export default function PedidosPage() {
     }
   }
 
+  // Efecto para mantener wake lock activo cuando la página está visible
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        // La página volvió a ser visible, reactivar wake lock
+        solicitarWakeLock()
+      }
+    }
+
+    document.addEventListener("visibilitychange", handleVisibilityChange)
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange)
+  }, [solicitarWakeLock])
+
   useEffect(() => {
     // Marcar como montado
     mountedRef.current = true
 
     fetchPedidos()
+
+    // Escuchar mensajes del Service Worker (para pedidos recibidos en background)
+    const handleServiceWorkerMessage = (event: MessageEvent) => {
+      if (event.data?.type === "NUEVO_PEDIDO_BACKGROUND") {
+        // Forzar actualización de pedidos
+        fetchPedidos()
+      }
+    }
+    navigator.serviceWorker?.addEventListener("message", handleServiceWorkerMessage)
 
     // Cargar no leidos del chat inicialmente
     async function loadChatNoLeidos() {
@@ -203,6 +233,7 @@ export default function PedidosPage() {
     return () => {
       // Limpiar todo al desmontar
       mountedRef.current = false
+      navigator.serviceWorker?.removeEventListener("message", handleServiceWorkerMessage)
       // Guardar referencias locales para el cleanup
       const { pedidos: pedidosCh, chat: chatCh } = channelsRef.current
       if (pedidosCh) {
@@ -307,6 +338,45 @@ export default function PedidosPage() {
 
   return (
     <div className="space-y-4">
+      {/* Banner de activación de notificaciones */}
+      {!tienePermisoNotificacion && (
+        <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-4 py-3 rounded-xl shadow-lg flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">🔔</span>
+            <div>
+              <p className="font-bold text-sm">Activa las alertas de pedidos</p>
+              <p className="text-purple-200 text-xs">Recibe notificaciones y sonidos incluso con la app minimizada</p>
+            </div>
+          </div>
+          <button
+            onClick={solicitarPermisoNotificaciones}
+            className="bg-white text-purple-700 px-4 py-2 rounded-lg text-sm font-bold hover:bg-purple-50 transition-colors"
+          >
+            Activar Alertas
+          </button>
+        </div>
+      )}
+
+      {/* Indicador de Wake Lock activo */}
+      {tienePermisoNotificacion && (
+        <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium ${tieneWakeLock ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}`}>
+          <span className="text-lg">{tieneWakeLock ? "🔒" : "🔓"}</span>
+          <span>
+            {tieneWakeLock
+              ? "Pantalla activa - Las alertas sonarán incluso en background"
+              : "Las alertas podrían no sonar si cambias de pestaña"}
+          </span>
+          {!tieneWakeLock && (
+            <button
+              onClick={solicitarWakeLock}
+              className="ml-auto underline font-semibold"
+            >
+              Mantener activo
+            </button>
+          )}
+        </div>
+      )}
+
       {chatNoLeidosTotal > 0 && !chatPedido && (
         <div className="fixed bottom-4 right-4 z-50 bg-blue-600 text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-bounce cursor-pointer"
           onClick={() => {
