@@ -75,8 +75,8 @@ export function useAlertaPedidos() {
     }
 
     try {
-      // @ts-ignore - Wake Lock puede no estar en todos los navegadores
-      const wakeLock = await navigator.wakeLock.request("screen")
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const wakeLock = await (navigator as any).wakeLock.request("screen")
       wakeLockRef.current = wakeLock
       setTieneWakeLock(true)
 
@@ -221,24 +221,27 @@ export function useAlertaPedidos() {
             window.focus()
             notification.close()
           }
-        } catch (e) {
+        } catch {
           // Fallback para móviles que no soportan new Notification
           if (swRegistrationRef.current?.showNotification) {
-            swRegistrationRef.current.showNotification(title, {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const options: any = {
               body,
               icon: "/icon-192.png",
               badge: "/icon-192.png",
               tag: "nuevo-pedido",
               requireInteraction: true,
               data: { tipo, vibrate: [500, 200, 500, 200, 500] }
-            } as any)
+            }
+            swRegistrationRef.current.showNotification(title, options)
           }
         }
       }
 
       // Reproducir sonido local (Web Audio API)
       try {
-        const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext)()
         audioContextRef.current = ctx
 
         // Función para crear un ciclo de sonido tipo "ringtone"
