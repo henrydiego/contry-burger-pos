@@ -925,7 +925,7 @@ export default function MenuPublico() {
                         <div className="p-4 flex flex-col flex-1">
                           <h3 className="font-bold text-white text-sm leading-tight mb-1 line-clamp-2 cursor-pointer hover:text-red-400 transition-colors" onClick={() => abrirDetalle(producto)}>{producto.nombre}</h3>
                           {producto.descripcion && (
-                            <p className="text-gray-400 text-xs leading-snug mb-2 line-clamp-2">{producto.descripcion}</p>
+                          <p className="text-gray-400 text-xs leading-snug mb-2 line-clamp-2">{producto.descripcion}</p>
                           )}
                           <p className="text-2xl font-black text-red-500 mb-4">${producto.precio_venta.toFixed(2)}</p>
                           {producto.agotado ? (
@@ -1155,7 +1155,7 @@ export default function MenuPublico() {
                       )}
                     </div>
                     <div className="p-3 flex flex-col flex-1">
-                      <h3 className="font-semibold text-white text-sm leading-tight line-clamp-2 mb-1 cursor-pointer active:text-red-400" onClick={() => abrirDetalle(producto)}>{producto.nombre}</h3>
+                      <h3 className="font-semibold text-white text-sm leading-tight mb-1 cursor-pointer active:text-red-400" onClick={() => abrirDetalle(producto)}>{producto.nombre}</h3>
                       {producto.descripcion && (
                         <p className="text-gray-400 text-xs leading-snug mb-2 line-clamp-2">{producto.descripcion}</p>
                       )}
