@@ -226,7 +226,7 @@ function SeguimientoContent() {
             <p className="text-orange-600 text-xs">Presiona el botón para notificar tu pago al restaurante</p>
             <a
               href={`https://wa.me/${whatsappPhone.replace(/\D/g, "")}?text=${encodeURIComponent(
-                `💳 *PAGO REALIZADO*\n\nPedido ${orderId}\nCliente: ${pedido.cliente_nombre}\nTotal: $${Number(pedido.total).toFixed(2)}\n\nYa realicé el pago por QR, por favor verificar mi pedido 🙏`
+                `💳 *PAGO REALIZADO*\n\nPedido ${orderId}\nCliente: ${pedido.cliente_nombre}\nTotal: Bs${Number(pedido.total).toFixed(2)}\n\nYa realicé el pago por QR, por favor verificar mi pedido 🙏`
               )}`}
               target="_blank" rel="noopener noreferrer"
               className="flex items-center justify-center gap-2 bg-green-600 hover:bg-green-500 text-white py-3.5 rounded-xl font-black text-base transition-all active:scale-95 shadow-lg shadow-green-900/20 w-full"
@@ -274,7 +274,7 @@ function SeguimientoContent() {
           </div>
           <div className="border-t pt-2 space-y-1">
             {(pedido.items || []).map((item, i) => (
-              <div key={i} className="flex justify-between text-sm"><span>{item.cantidad}x {item.nombre}</span><span className="text-gray-500">${item.subtotal.toFixed(2)}</span></div>
+              <div key={i} className="flex justify-between text-sm"><span>{item.cantidad}x {item.nombre}</span><span className="text-gray-500">Bs{item.subtotal.toFixed(2)}</span></div>
             ))}
           </div>
           <p className="text-xs text-gray-400">Pago: {pedido.metodo_pago}</p>

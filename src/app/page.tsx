@@ -111,12 +111,12 @@ export default function Dashboard() {
       const margen = ventasMesTotal > 0 ? ((gananciaNeta / ventasMesTotal) * 100) : 0
 
       const resumenFinanciero = [
-        { concepto: "Ventas POS Mes", valor: `$${ventasMes.toFixed(2)}` },
-        { concepto: "Gastos Mes", valor: `$${gastosMes.toFixed(2)}` },
-        { concepto: "Ganancia", valor: `$${gananciaNeta.toFixed(2)}` },
+        { concepto: "Ventas POS Mes", valor: `Bs${ventasMes.toFixed(2)}` },
+        { concepto: "Gastos Mes", valor: `Bs${gastosMes.toFixed(2)}` },
+        { concepto: "Ganancia", valor: `Bs${gananciaNeta.toFixed(2)}` },
         { concepto: "Margen %", valor: `${margen.toFixed(1)}%` },
         { concepto: "N Pedidos POS", valor: String(nPedidos) },
-        { concepto: "Ticket Prom.", valor: `$${ticketPromedio.toFixed(2)}` },
+        { concepto: "Ticket Prom.", valor: `Bs${ticketPromedio.toFixed(2)}` },
       ]
 
       // Alertas inventario
@@ -180,12 +180,12 @@ export default function Dashboard() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <StatCard title="Ventas POS Hoy" value={`$${data.ventasPosHoy.toFixed(2)}`} color="blue" icon="🖥️" />
-        <StatCard title="Ventas App Hoy" value={`$${data.ventasAppHoy.toFixed(2)}`} color="green" icon="📱" />
-        <StatCard title="Gastos Mes" value={`$${data.gastosMes.toFixed(2)}`} color="red" icon="💸" />
+        <StatCard title="Ventas POS Hoy" value={`Bs${data.ventasPosHoy.toFixed(2)}`} color="blue" icon="🖥️" />
+        <StatCard title="Ventas App Hoy" value={`Bs${data.ventasAppHoy.toFixed(2)}`} color="green" icon="📱" />
+        <StatCard title="Gastos Mes" value={`Bs${data.gastosMes.toFixed(2)}`} color="red" icon="💸" />
         <StatCard
           title="Ganancia Neta Mes"
-          value={`$${data.gananciaNeta.toFixed(2)}`}
+          value={`Bs${data.gananciaNeta.toFixed(2)}`}
           color={data.gananciaNeta >= 0 ? "green" : "red"}
           icon="🏆"
         />
@@ -200,7 +200,7 @@ export default function Dashboard() {
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="dia" tick={{ fontSize: 11 }} />
               <YAxis tick={{ fontSize: 11 }} />
-              <Tooltip formatter={(value) => [`$${Number(value).toFixed(2)}`, "Total"]} />
+              <Tooltip formatter={(value) => [`Bs${Number(value).toFixed(2)}`, "Total"]} />
               <Bar dataKey="total" fill="#e63946" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
@@ -214,14 +214,14 @@ export default function Dashboard() {
                 <span className="text-sm text-gray-700 font-medium">Ventas POS</span>
                 <span className="ml-1 text-xs text-gray-400">(cajero)</span>
               </div>
-              <span className="font-bold text-blue-600">${data.ventasPosHoy.toFixed(2)}</span>
+              <span className="font-bold text-blue-600">Bs{data.ventasPosHoy.toFixed(2)}</span>
             </div>
             <div className="flex justify-between items-center py-1.5 border-b">
               <div>
                 <span className="text-sm text-gray-700 font-medium">Ventas App</span>
                 <span className="ml-1 text-xs text-gray-400">(clientes)</span>
               </div>
-              <span className="font-bold text-purple-600">${data.ventasAppHoy.toFixed(2)}</span>
+              <span className="font-bold text-purple-600">Bs{data.ventasAppHoy.toFixed(2)}</span>
             </div>
             <div className="flex justify-between items-center py-1.5 border-b bg-gray-50 rounded px-1">
               <span className="text-sm font-bold text-gray-800">Total Ingresos</span>
@@ -229,7 +229,7 @@ export default function Dashboard() {
             </div>
             <div className="flex justify-between items-center py-1.5 border-b">
               <span className="text-sm text-gray-600">Gastos Hoy</span>
-              <span className="font-bold text-red-500">${data.gastosHoy.toFixed(2)}</span>
+              <span className="font-bold text-red-500">Bs{data.gastosHoy.toFixed(2)}</span>
             </div>
             <div className="flex justify-between items-center pt-1">
               <span className="text-sm font-bold">Neto del Dia</span>

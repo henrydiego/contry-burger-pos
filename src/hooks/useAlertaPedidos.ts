@@ -202,7 +202,7 @@ export function useAlertaPedidos() {
         const title =
           tipo === "qr" ? "💳 ¡Pedido QR Pendiente!" : "🍔 ¡Nuevo Pedido!"
         const body = pedidoInfo
-          ? `Pedido ${pedidoInfo.order_id} - ${pedidoInfo.cliente_nombre}\nTotal: $${pedidoInfo.total.toFixed(2)}`
+          ? `Pedido ${pedidoInfo.order_id} - ${pedidoInfo.cliente_nombre}\nTotal: Bs${pedidoInfo.total.toFixed(2)}`
           : tipo === "qr"
             ? "Nuevo pedido con pago QR - Verifica el pago"
             : "Nuevo pedido entrante"

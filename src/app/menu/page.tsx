@@ -421,15 +421,15 @@ export default function MenuPublico() {
                       <button onClick={() => cambiarCantidad(item.producto_id, 1)} className="text-red-400 font-bold text-xs w-3">+</button>
                     </div>
                     <span className="text-gray-300 flex-1">{item.nombre}</span>
-                    <span className="text-white font-semibold shrink-0">${item.subtotal.toFixed(2)}</span>
+                    <span className="text-white font-semibold shrink-0">Bs{item.subtotal.toFixed(2)}</span>
                   </div>
                 ))}
                 <div className="border-t border-gray-800 pt-2 mt-1 space-y-1">
-                  <div className="flex justify-between text-sm text-gray-400"><span>Subtotal</span><span>${subtotalProductos.toFixed(2)}</span></div>
-                  {costoEnvio > 0 && <div className="flex justify-between text-sm text-gray-400"><span>Envío</span><span>+${costoEnvio.toFixed(2)}</span></div>}
-                  {descuento > 0 && <div className="flex justify-between text-sm text-green-400"><span>Descuento</span><span>−${descuento.toFixed(2)}</span></div>}
+                  <div className="flex justify-between text-sm text-gray-400"><span>Subtotal</span><span>Bs{subtotalProductos.toFixed(2)}</span></div>
+                  {costoEnvio > 0 && <div className="flex justify-between text-sm text-gray-400"><span>Envío</span><span>+Bs{costoEnvio.toFixed(2)}</span></div>}
+                  {descuento > 0 && <div className="flex justify-between text-sm text-green-400"><span>Descuento</span><span>−Bs{descuento.toFixed(2)}</span></div>}
                   <div className="flex justify-between font-black text-xl pt-1 border-t border-gray-800">
-                    <span>Total</span><span className="text-red-500">${total.toFixed(2)}</span>
+                    <span>Total</span><span className="text-red-500">Bs{total.toFixed(2)}</span>
                   </div>
                 </div>
               </div>
@@ -535,7 +535,7 @@ export default function MenuPublico() {
                 )}
                 {cliente.tipo_entrega === "delivery" && (
                   <div className="space-y-2">
-                    {config.costo_envio > 0 && <p className="text-xs text-blue-400 text-center">Costo de envío: +${config.costo_envio.toFixed(2)}</p>}
+                    {config.costo_envio > 0 && <p className="text-xs text-blue-400 text-center">Costo de envío: +Bs{config.costo_envio.toFixed(2)}</p>}
                     {cliente.latitud ? (
                       <div className="flex items-center justify-between bg-green-950/40 border border-green-900/40 rounded-xl px-3 py-2.5">
                         <span className="text-green-400 text-sm font-medium">✅ Ubicación capturada</span>
@@ -562,7 +562,7 @@ export default function MenuPublico() {
                 <h3 className="font-semibold text-sm text-gray-300">🎫 Cupón de descuento</h3>
                 {cuponAplicado ? (
                   <div className="flex items-center justify-between bg-green-950/40 border border-green-900/40 rounded-xl px-3 py-2.5">
-                    <span className="text-green-400 text-sm font-bold">✅ {cuponAplicado.codigo} — −${cuponAplicado.descuento.toFixed(2)}</span>
+                    <span className="text-green-400 text-sm font-bold">✅ {cuponAplicado.codigo} — −Bs{cuponAplicado.descuento.toFixed(2)}</span>
                     <button onClick={() => { setCuponAplicado(null); setCuponInput("") }} className="text-xs text-red-400 underline">Quitar</button>
                   </div>
                 ) : (
@@ -629,14 +629,14 @@ export default function MenuPublico() {
                 {carrito.map(item => (
                   <div key={item.producto_id} className="flex justify-between text-sm">
                     <span className="text-gray-300">{item.cantidad}× {item.nombre}</span>
-                    <span className="text-white font-medium">${item.subtotal.toFixed(2)}</span>
+                    <span className="text-white font-medium">Bs{item.subtotal.toFixed(2)}</span>
                   </div>
                 ))}
                 <div className="border-t border-gray-800 pt-2 mt-1 space-y-1">
-                  {costoEnvio > 0 && <div className="flex justify-between text-sm text-gray-400"><span>Envío</span><span>+${costoEnvio.toFixed(2)}</span></div>}
-                  {descuento > 0 && <div className="flex justify-between text-sm text-green-400"><span>Descuento ({cuponAplicado?.codigo})</span><span>−${descuento.toFixed(2)}</span></div>}
+                  {costoEnvio > 0 && <div className="flex justify-between text-sm text-gray-400"><span>Envío</span><span>+Bs{costoEnvio.toFixed(2)}</span></div>}
+                  {descuento > 0 && <div className="flex justify-between text-sm text-green-400"><span>Descuento ({cuponAplicado?.codigo})</span><span>−Bs{descuento.toFixed(2)}</span></div>}
                   <div className="flex justify-between font-black text-2xl pt-1 border-t border-gray-800">
-                    <span>Total</span><span className="text-red-500">${total.toFixed(2)}</span>
+                    <span>Total</span><span className="text-red-500">Bs{total.toFixed(2)}</span>
                   </div>
                 </div>
               </div>
@@ -669,7 +669,7 @@ export default function MenuPublico() {
                     📥 Descargar QR
                   </button>
                   {config.instrucciones_pago && <p className="text-xs text-yellow-400">{config.instrucciones_pago}</p>}
-                  <p className="text-2xl font-black text-yellow-300">Monto: ${total.toFixed(2)}</p>
+                  <p className="text-2xl font-black text-yellow-300">Monto: Bs{total.toFixed(2)}</p>
                   <p className="text-xs text-yellow-500">Una vez pagado, presiona el botón de abajo ↓</p>
                 </div>
               )}
@@ -693,14 +693,14 @@ export default function MenuPublico() {
                       <h3 className="font-semibold text-gray-300 text-xs uppercase tracking-wide mb-3">Resumen del pago</h3>
                       <div className="flex justify-between"><span className="text-gray-500">Cliente</span><span className="text-white font-medium">{pedidoConfirmado.nombreCliente}</span></div>
                       <div className="flex justify-between"><span className="text-gray-500">Método</span><span className="text-white font-medium">📱 QR / Transferencia</span></div>
-                      <div className="flex justify-between border-t border-gray-800 pt-2 mt-1"><span className="text-gray-400 font-semibold">Total pagado</span><span className="text-red-400 font-black text-lg">${pedidoConfirmado.totalPagado.toFixed(2)}</span></div>
+                      <div className="flex justify-between border-t border-gray-800 pt-2 mt-1"><span className="text-gray-400 font-semibold">Total pagado</span><span className="text-red-400 font-black text-lg">Bs{pedidoConfirmado.totalPagado.toFixed(2)}</span></div>
                     </div>
 
                     {/* Botón principal WhatsApp */}
                     {pedidoConfirmado.whatsappPhone ? (
                       <a
                         href={`https://wa.me/${pedidoConfirmado.whatsappPhone.replace(/\D/g, "")}?text=${encodeURIComponent(
-                          `💳 *PAGO REALIZADO*\n\nPedido #${pedidoConfirmado.orderId}\nCliente: ${pedidoConfirmado.nombreCliente}\nTotal: $${pedidoConfirmado.totalPagado.toFixed(2)}\n\nYa realicé el pago por QR, por favor verificar mi pedido 🙏`
+                          `💳 *PAGO REALIZADO*\n\nPedido #${pedidoConfirmado.orderId}\nCliente: ${pedidoConfirmado.nombreCliente}\nTotal: Bs${pedidoConfirmado.totalPagado.toFixed(2)}\n\nYa realicé el pago por QR, por favor verificar mi pedido 🙏`
                         )}`}
                         target="_blank" rel="noopener noreferrer"
                         className="flex items-center justify-center gap-3 bg-green-600 hover:bg-green-500 active:scale-95 text-white py-4 rounded-2xl font-black text-base transition-all shadow-xl shadow-green-900/40 w-full">
@@ -727,7 +727,7 @@ export default function MenuPublico() {
                     <p className="text-green-400 font-black text-lg">¡Pedido {pedidoConfirmado.orderId} confirmado!</p>
                     <p className="text-gray-400 text-sm">Redirigiendo al seguimiento...</p>
                     {pedidoConfirmado.whatsappPhone && (
-                      <a href={`https://wa.me/${pedidoConfirmado.whatsappPhone.replace(/\D/g, "")}?text=${encodeURIComponent(`Hola Contry Burger, soy el pedido ${pedidoConfirmado.orderId}. Mi nombre: ${pedidoConfirmado.nombreCliente}. Monto: $${pedidoConfirmado.totalPagado.toFixed(2)}`)}`}
+                      <a href={`https://wa.me/${pedidoConfirmado.whatsappPhone.replace(/\D/g, "")}?text=${encodeURIComponent(`Hola Contry Burger, soy el pedido ${pedidoConfirmado.orderId}. Mi nombre: ${pedidoConfirmado.nombreCliente}. Monto: Bs${pedidoConfirmado.totalPagado.toFixed(2)}`)}`}
                         target="_blank" rel="noopener noreferrer"
                         className="flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 text-white py-3 rounded-xl font-bold transition-colors text-sm w-full">
                         <WhatsAppIcon className="w-5 h-5" />
@@ -927,7 +927,7 @@ export default function MenuPublico() {
                           {producto.descripcion && (
                           <p className="text-gray-400 text-xs leading-snug mb-2 line-clamp-2">{producto.descripcion}</p>
                           )}
-                          <p className="text-2xl font-black text-red-500 mb-4">${producto.precio_venta.toFixed(2)}</p>
+                          <p className="text-2xl font-black text-red-500 mb-4">Bs{producto.precio_venta.toFixed(2)}</p>
                           {producto.agotado ? (
                             <div className="mt-auto bg-gray-800 text-gray-500 text-sm text-center py-2.5 rounded-xl font-medium">Agotado hoy</div>
                           ) : enCarrito ? (
@@ -976,7 +976,7 @@ export default function MenuPublico() {
                       <div key={item.producto_id} className="flex items-center gap-3 bg-gray-800 rounded-xl p-2.5">
                         <div className="flex-1 min-w-0">
                           <p className="text-white font-semibold text-xs truncate">{item.nombre}</p>
-                          <p className="text-red-400 font-bold text-sm">${item.subtotal.toFixed(2)}</p>
+                          <p className="text-red-400 font-bold text-sm">Bs{item.subtotal.toFixed(2)}</p>
                         </div>
                         <div className="flex items-center gap-1.5 shrink-0">
                           <button onClick={() => cambiarCantidad(item.producto_id, -1)}
@@ -992,17 +992,17 @@ export default function MenuPublico() {
                   <div className="border-t border-gray-800 p-4 space-y-3">
                     <div className="flex justify-between items-center">
                       <span className="text-gray-400 text-sm">Subtotal</span>
-                      <span className="text-white font-black text-xl">${subtotalProductos.toFixed(2)}</span>
+                      <span className="text-white font-black text-xl">Bs{subtotalProductos.toFixed(2)}</span>
                     </div>
                     {config.pedido_minimo > 0 && subtotalProductos < config.pedido_minimo && (
                       <p className="text-yellow-400 text-xs text-center bg-yellow-950/30 border border-yellow-800/30 rounded-lg px-3 py-2">
-                        Mínimo: ${config.pedido_minimo.toFixed(2)} · Falta ${(config.pedido_minimo - subtotalProductos).toFixed(2)}
+                        Mínimo: Bs{config.pedido_minimo.toFixed(2)} · Falta Bs{(config.pedido_minimo - subtotalProductos).toFixed(2)}
                       </p>
                     )}
                     <button onClick={() => setStep("datos")}
                       disabled={config.pedido_minimo > 0 && subtotalProductos < config.pedido_minimo}
                       className="w-full bg-red-600 hover:bg-red-700 text-white py-3.5 rounded-xl font-black text-base transition-all hover:scale-105 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-red-900/30">
-                      Hacer pedido · ${subtotalProductos.toFixed(2)}
+                      Hacer pedido · Bs{subtotalProductos.toFixed(2)}
                     </button>
                   </div>
                 </>
@@ -1089,7 +1089,7 @@ export default function MenuPublico() {
               </div>
               {config.pedido_minimo > 0 && (
                 <div className="col-span-2 bg-yellow-950/30 border border-yellow-800/30 rounded-2xl p-3 text-center">
-                  <p className="text-yellow-300 text-sm font-medium">Pedido mínimo: ${config.pedido_minimo.toFixed(2)}</p>
+                  <p className="text-yellow-300 text-sm font-medium">Pedido mínimo: Bs{config.pedido_minimo.toFixed(2)}</p>
                 </div>
               )}
             </div>
@@ -1159,7 +1159,7 @@ export default function MenuPublico() {
                       {producto.descripcion && (
                         <p className="text-gray-400 text-xs leading-snug mb-2 line-clamp-2">{producto.descripcion}</p>
                       )}
-                      <p className="text-xl font-black text-red-500 mb-3">${producto.precio_venta.toFixed(2)}</p>
+                      <p className="text-xl font-black text-red-500 mb-3">Bs{producto.precio_venta.toFixed(2)}</p>
                       {producto.agotado ? (
                         <div className="mt-auto bg-gray-800 text-gray-500 text-xs text-center py-2 rounded-xl">Agotado hoy</div>
                       ) : enCarrito ? (
@@ -1302,7 +1302,7 @@ export default function MenuPublico() {
                       <div key={item.producto_id} className="flex items-center gap-3 bg-gray-800 rounded-2xl p-3">
                         <div className="flex-1 min-w-0">
                           <p className="text-white font-semibold text-sm truncate">{item.nombre}</p>
-                          <p className="text-red-400 font-bold text-sm">${item.subtotal.toFixed(2)}</p>
+                          <p className="text-red-400 font-bold text-sm">Bs{item.subtotal.toFixed(2)}</p>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
                           <button onClick={() => cambiarCantidad(item.producto_id, -1)}
@@ -1319,15 +1319,15 @@ export default function MenuPublico() {
                   <div className="px-5 pb-6 pt-3 border-t border-gray-800 space-y-3 shrink-0 safe-area-pb">
                     <div className="flex justify-between items-center">
                       <span className="text-gray-400 text-sm">{totalItems} artículo{totalItems !== 1 ? "s" : ""}</span>
-                      <span className="text-white font-black text-2xl">${subtotalProductos.toFixed(2)}</span>
+                      <span className="text-white font-black text-2xl">Bs{subtotalProductos.toFixed(2)}</span>
                     </div>
                     {config.pedido_minimo > 0 && subtotalProductos < config.pedido_minimo && (
-                      <p className="text-yellow-400 text-xs text-center">Mínimo: ${config.pedido_minimo.toFixed(2)} · Falta ${(config.pedido_minimo - subtotalProductos).toFixed(2)}</p>
+                      <p className="text-yellow-400 text-xs text-center">Mínimo: Bs{config.pedido_minimo.toFixed(2)} · Falta Bs{(config.pedido_minimo - subtotalProductos).toFixed(2)}</p>
                     )}
                     <button onClick={() => { setCarritoOpen(false); setStep("datos") }}
                       disabled={config.pedido_minimo > 0 && subtotalProductos < config.pedido_minimo}
                       className="w-full bg-red-600 hover:bg-red-700 text-white py-4 rounded-2xl font-black text-base transition-all active:scale-95 disabled:opacity-40 shadow-lg shadow-red-900/30">
-                      Hacer pedido · ${subtotalProductos.toFixed(2)}
+                      Hacer pedido · Bs{subtotalProductos.toFixed(2)}
                     </button>
                   </div>
                 )}
@@ -1368,7 +1368,7 @@ export default function MenuPublico() {
                                       </div>
                                     )}
                                     <p className="text-white text-xs font-semibold leading-tight line-clamp-2 flex-1">{prod.nombre}</p>
-                                    <p className="text-red-400 font-black text-sm mt-1 mb-2">${prod.precio_venta.toFixed(2)}</p>
+                                    <p className="text-red-400 font-black text-sm mt-1 mb-2">Bs{prod.precio_venta.toFixed(2)}</p>
                                     {enCarrito ? (
                                       <div className="flex items-center justify-between bg-gray-700 rounded-xl p-1">
                                         <button onClick={() => cambiarCantidad(prod.id, -1)}
@@ -1398,7 +1398,7 @@ export default function MenuPublico() {
                     <button onClick={() => { setCarritoOpen(false); setStep("datos") }}
                       disabled={config.pedido_minimo > 0 && subtotalProductos < config.pedido_minimo}
                       className="w-full bg-red-600 hover:bg-red-700 text-white py-4 rounded-2xl font-black text-base transition-all active:scale-95 disabled:opacity-40 shadow-lg shadow-red-900/30">
-                      Hacer pedido · ${subtotalProductos.toFixed(2)}
+                      Hacer pedido · Bs{subtotalProductos.toFixed(2)}
                     </button>
                   </div>
                 )}
@@ -1452,7 +1452,7 @@ export default function MenuPublico() {
                 {/* Name & Price */}
                 <div>
                   <h2 className="text-white font-black text-xl lg:text-2xl leading-tight">{detalleProducto.nombre}</h2>
-                  <p className="text-red-500 font-black text-2xl lg:text-3xl mt-1">${detalleProducto.precio_venta.toFixed(2)}</p>
+                  <p className="text-red-500 font-black text-2xl lg:text-3xl mt-1">Bs{detalleProducto.precio_venta.toFixed(2)}</p>
                 </div>
 
                 {/* Description */}
@@ -1496,7 +1496,7 @@ export default function MenuPublico() {
                 {/* Add button */}
                 <button onClick={agregarDesdeDetalle}
                   className="w-full bg-red-600 hover:bg-red-700 text-white py-3.5 rounded-2xl font-black text-base transition-all active:scale-95 shadow-lg shadow-red-900/30 flex items-center justify-center gap-2">
-                  Agregar al carrito · ${(detalleProducto.precio_venta * detalleCantidad).toFixed(2)}
+                  Agregar al carrito · Bs{(detalleProducto.precio_venta * detalleCantidad).toFixed(2)}
                 </button>
               </div>
             )}

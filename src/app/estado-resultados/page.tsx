@@ -168,12 +168,12 @@ export default function EstadoResultadosPage() {
 
   // Indicadores clave
   const indicadores = [
-    { indicador: "Ventas Totales Año", valor: `$${totalAnual.ventas.toFixed(2)}` },
-    { indicador: "Costo de Ventas", valor: `$${totalAnual.costo_ventas.toFixed(2)}` },
-    { indicador: "Utilidad Bruta", valor: `$${totalAnual.utilidad_bruta.toFixed(2)}` },
+    { indicador: "Ventas Totales Año", valor: `Bs${totalAnual.ventas.toFixed(2)}` },
+    { indicador: "Costo de Ventas", valor: `Bs${totalAnual.costo_ventas.toFixed(2)}` },
+    { indicador: "Utilidad Bruta", valor: `Bs${totalAnual.utilidad_bruta.toFixed(2)}` },
     { indicador: "Margen Bruto", valor: totalAnual.margen_bruto },
-    { indicador: "Gastos Operativos", valor: `$${totalAnual.gastos_operativos.toFixed(2)}` },
-    { indicador: "Utilidad Neta", valor: `$${totalAnual.utilidad_neta.toFixed(2)}` },
+    { indicador: "Gastos Operativos", valor: `Bs${totalAnual.gastos_operativos.toFixed(2)}` },
+    { indicador: "Utilidad Neta", valor: `Bs${totalAnual.utilidad_neta.toFixed(2)}` },
     { indicador: "Margen Neto", valor: totalAnual.margen_neto },
     { indicador: "ROI (retorno s/gastos)", valor: `${roi}%` },
   ]
@@ -192,8 +192,8 @@ export default function EstadoResultadosPage() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <StatCard title="Ventas Anuales" value={`$${totalAnual.ventas.toFixed(2)}`} color="green" icon="💰" />
-        <StatCard title="Utilidad Neta" value={`$${totalAnual.utilidad_neta.toFixed(2)}`} color={totalAnual.utilidad_neta >= 0 ? "green" : "red"} icon="🏆" />
+        <StatCard title="Ventas Anuales" value={`Bs${totalAnual.ventas.toFixed(2)}`} color="green" icon="💰" />
+        <StatCard title="Utilidad Neta" value={`Bs${totalAnual.utilidad_neta.toFixed(2)}`} color={totalAnual.utilidad_neta >= 0 ? "green" : "red"} icon="🏆" />
         <StatCard title="Margen Neto" value={totalAnual.margen_neto} color="blue" icon="📊" />
         <StatCard title="ROI" value={`${roi}%`} color="purple" icon="📈" />
       </div>
@@ -230,8 +230,8 @@ export default function EstadoResultadosPage() {
             {/* Barra de progreso */}
             <div>
               <div className="flex justify-between text-sm mb-1">
-                <span className="text-gray-600">Ventas actuales: <strong className="text-green-700">${ventasMesActualTotal.toFixed(2)}</strong></span>
-                <span className="text-gray-600">Equilibrio: <strong className="text-orange-700">${puntoEquilibrio.toFixed(2)}</strong></span>
+                <span className="text-gray-600">Ventas actuales: <strong className="text-green-700">Bs{ventasMesActualTotal.toFixed(2)}</strong></span>
+                <span className="text-gray-600">Equilibrio: <strong className="text-orange-700">Bs{puntoEquilibrio.toFixed(2)}</strong></span>
               </div>
               <div className="h-5 bg-gray-100 rounded-full overflow-hidden">
                 <div
@@ -242,7 +242,7 @@ export default function EstadoResultadosPage() {
               <div className="flex justify-between text-xs text-gray-400 mt-1">
                 <span>$0</span>
                 <span className="font-semibold text-gray-600">{pctHaciaPE.toFixed(0)}% alcanzado</span>
-                <span>${puntoEquilibrio.toFixed(2)}</span>
+                <span>Bs{puntoEquilibrio.toFixed(2)}</span>
               </div>
             </div>
 
@@ -250,12 +250,12 @@ export default function EstadoResultadosPage() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <div className="bg-red-50 border border-red-100 rounded-xl p-3 text-center">
                 <p className="text-xs text-gray-500">Costos Fijos</p>
-                <p className="text-lg font-black text-red-600">${costosFijos.toFixed(2)}</p>
+                <p className="text-lg font-black text-red-600">Bs{costosFijos.toFixed(2)}</p>
                 <p className="text-xs text-gray-400">Personal, Alquiler, Servicios</p>
               </div>
               <div className="bg-orange-50 border border-orange-100 rounded-xl p-3 text-center">
                 <p className="text-xs text-gray-500">Costos Variables</p>
-                <p className="text-lg font-black text-orange-600">${totalCostosVariables.toFixed(2)}</p>
+                <p className="text-lg font-black text-orange-600">Bs{totalCostosVariables.toFixed(2)}</p>
                 <p className="text-xs text-gray-400">Ingredientes + Operacion</p>
               </div>
               <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-center">
@@ -275,9 +275,9 @@ export default function EstadoResultadosPage() {
             {/* Explicacion */}
             <div className="bg-gray-50 border rounded-xl p-3 text-xs text-gray-600 space-y-1">
               <p><strong>Como leerlo:</strong> Con ${costosFijos.toFixed(2)} de costos fijos y un margen de {(margenContribucion * 100).toFixed(1)}%,
-                necesitas vender <strong>${puntoEquilibrio.toFixed(2)}</strong> este mes para no perder dinero.</p>
+                necesitas vender <strong>Bs{puntoEquilibrio.toFixed(2)}</strong> este mes para no perder dinero.</p>
               {!superaPE && faltaParaPE > 0 && (
-                <p>Te faltan <strong>${faltaParaPE.toFixed(2)}</strong> en ventas. Cada venta adicional
+                <p>Te faltan <strong>Bs{faltaParaPE.toFixed(2)}</strong> en ventas. Cada venta adicional
                   te genera <strong>${(margenContribucion).toFixed(2)} centavos de contribucion</strong> para cubrir costos fijos.</p>
               )}
               {superaPE && (

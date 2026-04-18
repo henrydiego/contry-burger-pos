@@ -54,9 +54,9 @@ export default function ReportesPage() {
   const margen = totalIngresos > 0 ? (ganancia / totalIngresos) * 100 : 0
 
   const resumenFinanciero = [
-    { concepto: "Total Ventas", valor: `$${totalIngresos.toFixed(2)}` },
-    { concepto: "Total Gastos", valor: `$${totalGastos.toFixed(2)}` },
-    { concepto: "Ganancia Neta", valor: `$${ganancia.toFixed(2)}` },
+    { concepto: "Total Ventas", valor: `Bs${totalIngresos.toFixed(2)}` },
+    { concepto: "Total Gastos", valor: `Bs${totalGastos.toFixed(2)}` },
+    { concepto: "Ganancia Neta", valor: `Bs${ganancia.toFixed(2)}` },
     { concepto: "Margen Neto", valor: `${margen.toFixed(1)}%` },
   ]
 
@@ -89,9 +89,9 @@ export default function ReportesPage() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <StatCard title="Ventas Mes" value={`$${totalIngresos.toFixed(2)}`} color="green" icon="💰" />
-        <StatCard title="Gastos Mes" value={`$${totalGastos.toFixed(2)}`} color="red" icon="💸" />
-        <StatCard title="Ganancia" value={`$${ganancia.toFixed(2)}`} color={ganancia >= 0 ? "green" : "red"} icon="🏆" />
+        <StatCard title="Ventas Mes" value={`Bs${totalIngresos.toFixed(2)}`} color="green" icon="💰" />
+        <StatCard title="Gastos Mes" value={`Bs${totalGastos.toFixed(2)}`} color="red" icon="💸" />
+        <StatCard title="Ganancia" value={`Bs${ganancia.toFixed(2)}`} color={ganancia >= 0 ? "green" : "red"} icon="🏆" />
         <StatCard title="Margen" value={`${margen.toFixed(1)}%`} color="blue" icon="📊" />
       </div>
 

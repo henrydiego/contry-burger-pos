@@ -121,7 +121,7 @@ function MisPedidosContent() {
                 {(pedido.items || []).map((item, i) => (
                   <div key={i} className="flex justify-between text-sm text-gray-600">
                     <span>{item.cantidad}x {item.nombre}</span>
-                    <span>${item.subtotal.toFixed(2)}</span>
+                    <span>Bs{item.subtotal.toFixed(2)}</span>
                   </div>
                 ))}
                 <div className="flex justify-between font-bold text-base pt-1.5 border-t mt-1">

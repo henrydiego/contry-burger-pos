@@ -459,7 +459,7 @@ export default function RecetasPage() {
                         {/* Cost total */}
                         <div className="bg-gray-800 text-white px-4 py-3 grid grid-cols-12 items-center">
                           <span className="col-span-9 font-bold">COSTO TOTAL DE RECETA</span>
-                          <span className="col-span-2 text-right text-lg font-black">${costoPreview.toFixed(2)}</span>
+                          <span className="col-span-2 text-right text-lg font-black">Bs{costoPreview.toFixed(2)}</span>
                           <span className="col-span-1"></span>
                         </div>
                         {/* Margin preview */}
@@ -471,10 +471,10 @@ export default function RecetasPage() {
                           return precio > 0 ? (
                             <div className="px-4 py-2 bg-gray-50 flex justify-between text-sm">
                               <span className="text-gray-500">
-                                Precio Venta: <strong>${precio.toFixed(2)}</strong>
+                                Precio Venta: <strong>Bs{precio.toFixed(2)}</strong>
                               </span>
                               <span className={ganancia >= 0 ? "text-green-700 font-bold" : "text-red-600 font-bold"}>
-                                Ganancia: ${ganancia.toFixed(2)} ({margen.toFixed(1)}%)
+                                Ganancia: Bs{ganancia.toFixed(2)} ({margen.toFixed(1)}%)
                               </span>
                             </div>
                           ) : null

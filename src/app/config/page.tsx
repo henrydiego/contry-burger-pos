@@ -805,7 +805,7 @@ export default function ConfigPage() {
                     <div className="flex-1 min-w-0">
                       <p className="font-mono font-bold text-sm">{c.codigo}</p>
                       <p className="text-xs text-gray-500">
-                        {c.tipo === "porcentaje" ? `${c.valor}% off` : `$${c.valor} off`} · {c.usos_actuales}/{c.usos_max} usos
+                        {c.tipo === "porcentaje" ? `${c.valor}% off` : `Bs${c.valor} off`} · {c.usos_actuales}/{c.usos_max} usos
                         {c.fecha_vencimiento && ` · vence ${c.fecha_vencimiento}`}
                       </p>
                     </div>

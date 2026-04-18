@@ -517,14 +517,14 @@ export default function POSPage() {
         <div className="border-t p-3 space-y-3">
           <div className="flex justify-between text-xl font-bold">
             <span>TOTAL</span>
-            <span className="text-[var(--primary)]">${total.toFixed(2)}</span>
+            <span className="text-[var(--primary)]">Bs{total.toFixed(2)}</span>
           </div>
 
           {carrito.length > 0 && userRole !== 'cajero' && (
             <div className="flex justify-between text-xs text-gray-500 border-t pt-1">
-              <span>Costo: ${costoTotal.toFixed(2)}</span>
+              <span>Costo: Bs{costoTotal.toFixed(2)}</span>
               <span className={utilidad >= 0 ? "text-green-600 font-semibold" : "text-red-600 font-semibold"}>
-                Utilidad: ${utilidad.toFixed(2)}
+                Utilidad: Bs{utilidad.toFixed(2)}
               </span>
             </div>
           )}
@@ -558,7 +558,7 @@ export default function POSPage() {
               {montoNum > 0 && (
                 <div className={`flex justify-between text-sm font-bold px-1 ${cambio >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                   <span>Cambio:</span>
-                  <span>${cambio >= 0 ? cambio.toFixed(2) : `Faltan $${Math.abs(cambio).toFixed(2)}`}</span>
+                  <span>Bs{cambio >= 0 ? cambio.toFixed(2) : `Faltan Bs${Math.abs(cambio).toFixed(2)}`}</span>
                 </div>
               )}
             </div>
@@ -688,8 +688,8 @@ export default function POSPage() {
                   <div key={i} className="flex text-sm py-1 leading-snug">
                     <span className="flex-1 break-words min-w-0">{item.nombre}</span>
                     <span className="w-8 text-center shrink-0">{item.cantidad}</span>
-                    <span className="w-16 text-right shrink-0">${item.precio_unitario.toFixed(2)}</span>
-                    <span className="w-18 text-right font-semibold shrink-0">${item.subtotal.toFixed(2)}</span>
+                    <span className="w-16 text-right shrink-0">Bs{item.precio_unitario.toFixed(2)}</span>
+                    <span className="w-18 text-right font-semibold shrink-0">Bs{item.subtotal.toFixed(2)}</span>
                   </div>
                 ))}
               </div>
@@ -698,7 +698,7 @@ export default function POSPage() {
               <div className="space-y-1">
                 <div className="flex justify-between font-black text-lg border-t-2 border-gray-800 pt-2">
                   <span>TOTAL</span>
-                  <span>${ticketData.total.toFixed(2)}</span>
+                  <span>Bs{ticketData.total.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-xs text-gray-600">
                   <span>Método de pago:</span>
@@ -708,7 +708,7 @@ export default function POSPage() {
                   <>
                     <div className="flex justify-between text-xs text-gray-600">
                       <span>Recibido:</span>
-                      <span className="font-semibold">${ticketData.montoRecibido.toFixed(2)}</span>
+                      <span className="font-semibold">Bs{ticketData.montoRecibido.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-xs font-bold text-green-700">
                       <span>Cambio:</span>

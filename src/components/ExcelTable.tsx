@@ -31,7 +31,7 @@ export default function ExcelTable({
 
   const formatValue = (value: unknown, type?: string) => {
     if (value === null || value === undefined) return "—"
-    if (type === "currency") return `$${Number(value).toFixed(2)}`
+    if (type === "currency") return `Bs${Number(value).toFixed(2)}`
     if (type === "number") return Number(value).toLocaleString()
     if (type === "date" && typeof value === "string") {
       return new Date(value).toLocaleDateString("es-MX")

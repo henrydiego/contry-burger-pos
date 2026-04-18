@@ -311,24 +311,24 @@ export default function CajaPage() {
             <div className="grid grid-cols-2 gap-3">
               <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 space-y-1.5">
                 <p className="text-xs font-black text-blue-700 uppercase tracking-wide">VENTAS DE CAJA</p>
-                <div className="flex justify-between text-sm"><span className="text-gray-600">Efectivo</span><span className="font-bold">${ventasPos.efectivo.toFixed(2)}</span></div>
-                <div className="flex justify-between text-sm"><span className="text-gray-600">QR / Digital</span><span className="font-bold">${ventasPos.qr.toFixed(2)}</span></div>
-                {ventasPos.tarjeta > 0 && <div className="flex justify-between text-sm"><span className="text-gray-600">Tarjeta</span><span className="font-bold">${ventasPos.tarjeta.toFixed(2)}</span></div>}
-                <div className="flex justify-between font-black text-blue-700 border-t border-blue-200 pt-1 text-sm"><span>Subtotal</span><span>${totalPosHoy.toFixed(2)}</span></div>
+                <div className="flex justify-between text-sm"><span className="text-gray-600">Efectivo</span><span className="font-bold">Bs{ventasPos.efectivo.toFixed(2)}</span></div>
+                <div className="flex justify-between text-sm"><span className="text-gray-600">QR / Digital</span><span className="font-bold">Bs{ventasPos.qr.toFixed(2)}</span></div>
+                {ventasPos.tarjeta > 0 && <div className="flex justify-between text-sm"><span className="text-gray-600">Tarjeta</span><span className="font-bold">Bs{ventasPos.tarjeta.toFixed(2)}</span></div>}
+                <div className="flex justify-between font-black text-blue-700 border-t border-blue-200 pt-1 text-sm"><span>Subtotal</span><span>Bs{totalPosHoy.toFixed(2)}</span></div>
               </div>
 
               <div className="bg-purple-50 border border-purple-200 rounded-xl p-3 space-y-1.5">
                 <p className="text-xs font-black text-purple-700 uppercase tracking-wide">VENTAS EN LÍNEA</p>
-                <div className="flex justify-between text-sm"><span className="text-gray-600">Efectivo</span><span className="font-bold">${ventasApp.efectivo.toFixed(2)}</span></div>
-                <div className="flex justify-between text-sm"><span className="text-gray-600">QR / Digital</span><span className="font-bold">${ventasApp.qr.toFixed(2)}</span></div>
-                <div className="flex justify-between font-black text-purple-700 border-t border-purple-200 pt-1 text-sm"><span>Subtotal</span><span>${totalAppHoy.toFixed(2)}</span></div>
+                <div className="flex justify-between text-sm"><span className="text-gray-600">Efectivo</span><span className="font-bold">Bs{ventasApp.efectivo.toFixed(2)}</span></div>
+                <div className="flex justify-between text-sm"><span className="text-gray-600">QR / Digital</span><span className="font-bold">Bs{ventasApp.qr.toFixed(2)}</span></div>
+                <div className="flex justify-between font-black text-purple-700 border-t border-purple-200 pt-1 text-sm"><span>Subtotal</span><span>Bs{totalAppHoy.toFixed(2)}</span></div>
               </div>
             </div>
 
             <div className="bg-gray-900 text-white rounded-xl p-4 grid grid-cols-3 gap-3 text-center">
-              <div><p className="text-xs text-gray-400">Total Ingresos</p><p className="text-xl font-black text-green-400">${totalIngresosHoy.toFixed(2)}</p></div>
-              <div><p className="text-xs text-gray-400">Gastos</p><p className="text-xl font-black text-red-400">${totalGastosHoy.toFixed(2)}</p></div>
-              <div><p className="text-xs text-gray-400">Neto del Dia</p><p className={`text-xl font-black ${netoHoy >= 0 ? "text-white" : "text-red-400"}`}>${netoHoy.toFixed(2)}</p></div>
+              <div><p className="text-xs text-gray-400">Total Ingresos</p><p className="text-xl font-black text-green-400">Bs{totalIngresosHoy.toFixed(2)}</p></div>
+              <div><p className="text-xs text-gray-400">Gastos</p><p className="text-xl font-black text-red-400">Bs{totalGastosHoy.toFixed(2)}</p></div>
+              <div><p className="text-xs text-gray-400">Neto del Dia</p><p className={`text-xl font-black ${netoHoy >= 0 ? "text-white" : "text-red-400"}`}>Bs{netoHoy.toFixed(2)}</p></div>
             </div>
           </div>
 
@@ -398,12 +398,12 @@ export default function CajaPage() {
                         <p className="font-medium">{g.concepto}</p>
                         <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">{g.categoria}</span>
                       </div>
-                      <span className="font-bold text-red-600">${g.monto.toFixed(2)}</span>
+                      <span className="font-bold text-red-600">Bs{g.monto.toFixed(2)}</span>
                     </div>
                   ))}
                   <div className="flex justify-between font-black pt-2 text-sm">
                     <span>Total Gastos</span>
-                    <span className="text-red-600">${totalGastosHoy.toFixed(2)}</span>
+                    <span className="text-red-600">Bs{totalGastosHoy.toFixed(2)}</span>
                   </div>
                 </div>
               )}
@@ -453,7 +453,7 @@ export default function CajaPage() {
                     <p className="text-xs font-black text-gray-500 uppercase tracking-wider">Billetes</p>
                     {BILLETES.map(d => (
                       <div key={d} className="flex items-center gap-3">
-                        <span className="w-16 text-right text-sm font-bold text-gray-700">${d}.00</span>
+                        <span className="w-16 text-right text-sm font-bold text-gray-700">Bs{d}.00</span>
                         <span className="text-gray-400 text-sm">×</span>
                         <input
                           type="number" min="0" placeholder="0"
@@ -472,7 +472,7 @@ export default function CajaPage() {
                     <p className="text-xs font-black text-gray-500 uppercase tracking-wider pt-2">Monedas</p>
                     {MONEDAS.map(d => (
                       <div key={d} className="flex items-center gap-3">
-                        <span className="w-16 text-right text-sm font-bold text-gray-700">${d.toFixed(2)}</span>
+                        <span className="w-16 text-right text-sm font-bold text-gray-700">Bs{d.toFixed(2)}</span>
                         <span className="text-gray-400 text-sm">×</span>
                         <input
                           type="number" min="0" placeholder="0"
@@ -491,18 +491,18 @@ export default function CajaPage() {
                   {/* Total contado */}
                   <div className="bg-gray-50 border-t px-4 py-3 flex justify-between items-center">
                     <span className="font-black text-gray-700">TOTAL CONTADO</span>
-                    <span className="text-2xl font-black text-gray-900">${totalContado.toFixed(2)}</span>
+                    <span className="text-2xl font-black text-gray-900">Bs{totalContado.toFixed(2)}</span>
                   </div>
                 </div>
 
                 {/* Diferencia */}
                 {totalContado > 0 && (
                   <div className={`rounded-xl p-4 text-center space-y-1 ${Math.abs(diferenciaConteo) < 0.01 ? "bg-green-100" : "bg-red-100"}`}>
-                    <p className="text-sm text-gray-600">Sistema: <strong>${efectivoSistema.toFixed(2)}</strong> | Contado: <strong>${totalContado.toFixed(2)}</strong></p>
+                    <p className="text-sm text-gray-600">Sistema: <strong>Bs{efectivoSistema.toFixed(2)}</strong> | Contado: <strong>Bs{totalContado.toFixed(2)}</strong></p>
                     <p className={`text-xl font-black ${Math.abs(diferenciaConteo) < 0.01 ? "text-green-700" : "text-red-700"}`}>
                       {Math.abs(diferenciaConteo) < 0.01
                         ? "✅ La caja CUADRA perfectamente"
-                        : `${diferenciaConteo > 0 ? "⬆️ SOBRANTE" : "⬇️ FALTANTE"}: $${Math.abs(diferenciaConteo).toFixed(2)}`}
+                        : `${diferenciaConteo > 0 ? "⬆️ SOBRANTE" : "⬇️ FALTANTE"}: Bs${Math.abs(diferenciaConteo).toFixed(2)}`}
                     </p>
                   </div>
                 )}
@@ -558,7 +558,7 @@ export default function CajaPage() {
           </div>
 
           <div className={`text-center font-bold py-2 rounded-xl text-sm ${Math.abs(cajaHoy.diferencia || 0) < 0.01 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
-            {Math.abs(cajaHoy.diferencia || 0) < 0.01 ? "✅ Caja Cuadra" : `⚠️ Descuadre de $${Math.abs(cajaHoy.diferencia || 0).toFixed(2)}`}
+            {Math.abs(cajaHoy.diferencia || 0) < 0.01 ? "✅ Caja Cuadra" : `⚠️ Descuadre de Bs${Math.abs(cajaHoy.diferencia || 0).toFixed(2)}`}
           </div>
         </div>
       )}
@@ -678,7 +678,7 @@ export default function CajaPage() {
                 <p className="font-black text-sm">
                   {Math.abs(cajaArqueo.diferencia || 0) < 0.01
                     ? "✅ CAJA CUADRA — $0.00"
-                    : `${(cajaArqueo.diferencia || 0) > 0 ? "⬆️ SOBRANTE" : "⬇️ FALTANTE"}: $${Math.abs(cajaArqueo.diferencia || 0).toFixed(2)}`}
+                    : `${(cajaArqueo.diferencia || 0) > 0 ? "⬆️ SOBRANTE" : "⬇️ FALTANTE"}: Bs${Math.abs(cajaArqueo.diferencia || 0).toFixed(2)}`}
                 </p>
               </div>
 
@@ -712,8 +712,8 @@ export default function CajaPage() {
               <div key={mes} className="flex items-center justify-between px-4 py-2.5 text-sm">
                 <span className="font-mono text-gray-600">{mes}</span>
                 <div className="flex gap-4 text-right">
-                  <div><p className="text-xs text-gray-400">Ventas</p><p className="font-bold text-green-700">${d.ventas.toFixed(2)}</p></div>
-                  <div><p className="text-xs text-gray-400">Gastos</p><p className="font-bold text-red-600">${d.gastos.toFixed(2)}</p></div>
+                  <div><p className="text-xs text-gray-400">Ventas</p><p className="font-bold text-green-700">Bs{d.ventas.toFixed(2)}</p></div>
+                  <div><p className="text-xs text-gray-400">Gastos</p><p className="font-bold text-red-600">Bs{d.gastos.toFixed(2)}</p></div>
                   <div><p className="text-xs text-gray-400">Neto</p><p className={`font-black ${(d.ventas - d.gastos) >= 0 ? "text-gray-800" : "text-red-600"}`}>${(d.ventas - d.gastos).toFixed(2)}</p></div>
                 </div>
               </div>

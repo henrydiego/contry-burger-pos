@@ -536,15 +536,15 @@ export default function RegistroHistoricoPage() {
               <div className="mt-4 pt-4 border-t grid grid-cols-2 md:grid-cols-4 gap-3">
                 <div className="bg-green-50 rounded-lg p-3 text-center">
                   <p className="text-xs text-gray-500">Efectivo</p>
-                  <p className="text-lg font-bold text-green-700">${totalMesEfectivo.toFixed(2)}</p>
+                  <p className="text-lg font-bold text-green-700">Bs{totalMesEfectivo.toFixed(2)}</p>
                 </div>
                 <div className="bg-blue-50 rounded-lg p-3 text-center">
                   <p className="text-xs text-gray-500">QR</p>
-                  <p className="text-lg font-bold text-blue-700">${totalMesQR.toFixed(2)}</p>
+                  <p className="text-lg font-bold text-blue-700">Bs{totalMesQR.toFixed(2)}</p>
                 </div>
                 <div className="bg-red-50 rounded-lg p-3 text-center">
                   <p className="text-xs text-gray-500">Gastos</p>
-                  <p className="text-lg font-bold text-red-700">${totalMesGastos.toFixed(2)}</p>
+                  <p className="text-lg font-bold text-red-700">Bs{totalMesGastos.toFixed(2)}</p>
                 </div>
                 <div className="bg-gray-50 rounded-lg p-3 text-center">
                   <p className="text-xs text-gray-500">Dias registrados</p>
@@ -581,10 +581,10 @@ export default function RegistroHistoricoPage() {
                   return (
                     <tr key={dia.fecha} className="border-b hover:bg-gray-50">
                       <td className="py-2 pr-4">{formatearFecha(dia.fecha)}</td>
-                      <td className="py-2 pr-4 text-right">${dia.total_efectivo.toFixed(2)}</td>
-                      <td className="py-2 pr-4 text-right">${dia.total_qr.toFixed(2)}</td>
-                      <td className="py-2 pr-4 text-right font-medium">${totalVentas.toFixed(2)}</td>
-                      <td className="py-2 pr-4 text-right text-red-600">${dia.total_gastos.toFixed(2)}</td>
+                      <td className="py-2 pr-4 text-right">Bs{dia.total_efectivo.toFixed(2)}</td>
+                      <td className="py-2 pr-4 text-right">Bs{dia.total_qr.toFixed(2)}</td>
+                      <td className="py-2 pr-4 text-right font-medium">Bs{totalVentas.toFixed(2)}</td>
+                      <td className="py-2 pr-4 text-right text-red-600">Bs{dia.total_gastos.toFixed(2)}</td>
                       <td className={`py-2 text-right font-bold ${neto >= 0 ? "text-green-600" : "text-red-600"}`}>
                         ${neto.toFixed(2)}
                       </td>
@@ -595,10 +595,10 @@ export default function RegistroHistoricoPage() {
               <tfoot>
                 <tr className="border-t-2 font-bold">
                   <td className="py-2 pr-4">Total</td>
-                  <td className="py-2 pr-4 text-right">${totalMesEfectivo.toFixed(2)}</td>
-                  <td className="py-2 pr-4 text-right">${totalMesQR.toFixed(2)}</td>
+                  <td className="py-2 pr-4 text-right">Bs{totalMesEfectivo.toFixed(2)}</td>
+                  <td className="py-2 pr-4 text-right">Bs{totalMesQR.toFixed(2)}</td>
                   <td className="py-2 pr-4 text-right">${(totalMesEfectivo + totalMesQR).toFixed(2)}</td>
-                  <td className="py-2 pr-4 text-right text-red-600">${totalMesGastos.toFixed(2)}</td>
+                  <td className="py-2 pr-4 text-right text-red-600">Bs{totalMesGastos.toFixed(2)}</td>
                   <td className={`py-2 text-right ${(totalMesEfectivo + totalMesQR - totalMesGastos) >= 0 ? "text-green-600" : "text-red-600"}`}>
                     ${(totalMesEfectivo + totalMesQR - totalMesGastos).toFixed(2)}
                   </td>

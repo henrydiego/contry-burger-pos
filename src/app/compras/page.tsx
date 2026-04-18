@@ -152,8 +152,8 @@ export default function ComprasPage() {
       </div>
 
       <div className="grid grid-cols-3 gap-4">
-        <StatCard title="Total Compras" value={`$${totalCompras.toFixed(2)}`} color="purple" icon="🛒" />
-        <StatCard title="Compras Este Mes" value={`$${totalMes.toFixed(2)}`} color="blue" icon="📅" />
+        <StatCard title="Total Compras" value={`Bs${totalCompras.toFixed(2)}`} color="purple" icon="🛒" />
+        <StatCard title="Compras Este Mes" value={`Bs${totalMes.toFixed(2)}`} color="blue" icon="📅" />
         <StatCard title="N Compras Mes" value={String(comprasMes.length)} color="green" icon="📦" />
       </div>
 

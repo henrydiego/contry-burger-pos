@@ -132,7 +132,7 @@ export default function GastosPage() {
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        <StatCard title="Total Gastos" value={`$${totalGastos.toFixed(2)}`} color="red" icon="💸" subtitle={`${gastosFiltrados.length} registros`} />
+        <StatCard title="Total Gastos" value={`Bs${totalGastos.toFixed(2)}`} color="red" icon="💸" subtitle={`${gastosFiltrados.length} registros`} />
         <StatCard title="Categorias" value={String(Object.keys(porTipo).length)} color="blue" icon="📊" />
       </div>
 

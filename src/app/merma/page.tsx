@@ -154,8 +154,8 @@ export default function MermaPage() {
       </div>
 
       <div className="grid grid-cols-3 gap-4">
-        <StatCard title="Merma Total" value={`$${totalMerma.toFixed(2)}`} color="red" icon="📉" />
-        <StatCard title="Merma Este Mes" value={`$${mermaMes.toFixed(2)}`} color="yellow" icon="⚠️" />
+        <StatCard title="Merma Total" value={`Bs${totalMerma.toFixed(2)}`} color="red" icon="📉" />
+        <StatCard title="Merma Este Mes" value={`Bs${mermaMes.toFixed(2)}`} color="yellow" icon="⚠️" />
         <StatCard title="Registros Mes" value={String(mermaMesArr.length)} color="blue" icon="📋" />
       </div>
 

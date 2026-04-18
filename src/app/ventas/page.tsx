@@ -68,11 +68,11 @@ export default function VentasPage() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <StatCard title="Total Ventas" value={`$${totalVentas.toFixed(2)}`} color="green" icon="💰" subtitle={`${ventasFiltradas.length} lineas`} />
+        <StatCard title="Total Ventas" value={`Bs${totalVentas.toFixed(2)}`} color="green" icon="💰" subtitle={`${ventasFiltradas.length} lineas`} />
         <StatCard title="N Pedidos" value={String(nPedidos)} color="blue" icon="🧾" />
-        <StatCard title="Ticket Prom." value={`$${ticketPromedio.toFixed(2)}`} color="purple" icon="📊" />
-        <StatCard title="Efectivo" value={`$${efectivo.toFixed(2)}`} color="green" icon="💵" />
-        <StatCard title="Tarjeta + QR" value={`$${(tarjeta + qr).toFixed(2)}`} color="blue" icon="💳" />
+        <StatCard title="Ticket Prom." value={`Bs${ticketPromedio.toFixed(2)}`} color="purple" icon="📊" />
+        <StatCard title="Efectivo" value={`Bs${efectivo.toFixed(2)}`} color="green" icon="💵" />
+        <StatCard title="Tarjeta + QR" value={`Bs${(tarjeta + qr).toFixed(2)}`} color="blue" icon="💳" />
       </div>
 
       <ExcelTable

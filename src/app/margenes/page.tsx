@@ -93,7 +93,7 @@ export default function MargenesPage() {
       <h2 className="text-2xl font-bold">Analisis de Margenes</h2>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <StatCard title="Total Ventas" value={`$${totalVentas.toFixed(2)}`} color="green" icon="💰" />
+        <StatCard title="Total Ventas" value={`Bs${totalVentas.toFixed(2)}`} color="green" icon="💰" />
         <StatCard title="Rent. Alta" value={String(altos)} color="green" icon="🟢" subtitle=">50% margen" />
         <StatCard title="Rent. Media" value={String(medios)} color="yellow" icon="🟡" subtitle="30-50% margen" />
         <StatCard title="Rent. Baja" value={String(bajos)} color="red" icon="🔴" subtitle="<30% margen" />

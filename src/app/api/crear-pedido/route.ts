@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
     const pedidoMinimo = Number(cfg?.pedido_minimo ?? 0)
 
     if (pedidoMinimo > 0 && subtotal < pedidoMinimo)
-      return NextResponse.json({ error: `El pedido mínimo es $${pedidoMinimo.toFixed(2)}` }, { status: 400 })
+      return NextResponse.json({ error: `El pedido mínimo es Bs${pedidoMinimo.toFixed(2)}` }, { status: 400 })
 
     let descuento = 0
     let cuponValido: string | null = null

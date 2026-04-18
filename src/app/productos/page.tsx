@@ -219,7 +219,7 @@ export default function ProductosPage() {
             const m = p > 0 ? ((p - c) / p * 100) : 0
             return (
               <div className={`rounded-lg px-4 py-2 text-sm font-semibold text-center ${m >= 30 ? "bg-green-50 text-green-700" : "bg-yellow-50 text-yellow-700"}`}>
-                Margen: {m.toFixed(1)}% — Ganancia por unidad: ${(p - c).toFixed(2)}
+                Margen: {m.toFixed(1)}% — Ganancia por unidad: Bs{(p - c).toFixed(2)}
               </div>
             )
           })()}
@@ -283,12 +283,12 @@ export default function ProductosPage() {
               <div className="p-2.5 space-y-1.5">
                 <p className="text-xs font-bold leading-tight line-clamp-2">{prod.nombre}</p>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-black text-red-600">${prod.precio_venta.toFixed(2)}</span>
+                  <span className="text-sm font-black text-red-600">Bs{prod.precio_venta.toFixed(2)}</span>
                   <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-full ${prod.margen >= 30 ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}`}>
                     {prod.margen.toFixed(0)}%
                   </span>
                 </div>
-                <p className="text-xs text-gray-400">Costo: ${prod.costoBase.toFixed(2)}</p>
+                <p className="text-xs text-gray-400">Costo: Bs{prod.costoBase.toFixed(2)}</p>
 
                 <div className="flex flex-col gap-1 pt-0.5">
                   {/* Input foto oculto */}

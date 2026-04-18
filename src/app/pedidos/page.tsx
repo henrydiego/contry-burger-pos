@@ -431,7 +431,7 @@ export default function PedidosPage() {
         <StatCard title="Pendientes" value={String(pendientes)} color={pendientes > 0 ? "red" : "green"} icon="🕐" />
         <StatCard title="Preparando" value={String(preparando)} color="blue" icon="👨‍🍳" />
         <StatCard title="Listos" value={String(listos)} color="green" icon="✅" />
-        <StatCard title="Ventas Hoy" value={`$${totalHoy.toFixed(2)}`} color="green" icon="💰" />
+        <StatCard title="Ventas Hoy" value={`Bs${totalHoy.toFixed(2)}`} color="green" icon="💰" />
       </div>
 
       {pedidosFiltrados.length === 0 ? (
@@ -509,7 +509,7 @@ export default function PedidosPage() {
                   {(pedido.items || []).map((item, i) => (
                     <div key={i} className="flex justify-between text-sm">
                       <span>{item.cantidad}x {item.nombre}</span>
-                      <span className="text-gray-600">${item.subtotal.toFixed(2)}</span>
+                      <span className="text-gray-600">Bs{item.subtotal.toFixed(2)}</span>
                     </div>
                   ))}
                   <div className="flex justify-between font-bold text-lg pt-2 border-t">

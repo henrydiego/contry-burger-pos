@@ -129,8 +129,8 @@ export default function HorasPicoPage() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <StatCard title="Hora Pico" value={horaPico?.hora || "-"} color="red" icon="🔥" subtitle={`$${(horaPico?.ventas || 0).toFixed(2)}`} />
-        <StatCard title="Total Ventas" value={`$${totalVentas.toFixed(2)}`} color="green" icon="💰" />
+        <StatCard title="Hora Pico" value={horaPico?.hora || "-"} color="red" icon="🔥" subtitle={`Bs${(horaPico?.ventas || 0).toFixed(2)}`} />
+        <StatCard title="Total Ventas" value={`Bs${totalVentas.toFixed(2)}`} color="green" icon="💰" />
         <StatCard title="Transacciones" value={String(totalTransacciones)} color="blue" icon="🧾" />
         <StatCard title="Horas Pico" value={String(picoCount)} color="purple" icon="📈" subtitle="arriba del promedio" />
       </div>
@@ -142,7 +142,7 @@ export default function HorasPicoPage() {
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="hora" tick={{ fontSize: 11 }} />
             <YAxis tick={{ fontSize: 11 }} />
-            <Tooltip formatter={(value) => [`$${Number(value).toFixed(2)}`, "Ventas"]} />
+            <Tooltip formatter={(value) => [`Bs${Number(value).toFixed(2)}`, "Ventas"]} />
             <Bar dataKey="ventas" fill="#e63946" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
