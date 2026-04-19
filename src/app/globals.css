@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Manrope:wght@400;500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -14,10 +16,22 @@
 }
 
 body {
-  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-family: 'Manrope', 'Segoe UI', system-ui, -apple-system, sans-serif;
   color: var(--foreground);
   background: var(--background);
 }
+
+/* Contry Burger brand theme */
+.cb-cream     { background: #FBF5EC; }
+.cb-white     { background: #FFFFFF; }
+.cb-ink       { color: #2A1810; }
+.cb-ink-soft  { color: #6B4A3A; }
+.cb-primary   { color: #B0281B; }
+.cb-bg-primary { background: #B0281B; }
+.font-archivo { font-family: 'Archivo Black', Impact, sans-serif; }
+.font-manrope { font-family: 'Manrope', system-ui, sans-serif; }
+.btn-3d { box-shadow: 0 4px 0 #7A1A10, 0 8px 16px rgba(176,40,27,0.25); }
+.btn-3d:active { box-shadow: 0 1px 0 #7A1A10; transform: translateY(3px); }
 
 /* Excel-like table styles */
 .excel-table {
